@@ -89,6 +89,7 @@
         <div class="demoFormGrid">
           <label>Компания<input id="fCompany" value="Aluminstar" readonly></label>
           <label>Юридическое лицо<input id="fLegal" value="ООО «Завод СПК Звезда»" readonly></label>
+          <label>ИНН<input id="fInn" value="7724406329" readonly></label>
           <label>Кто обращается<input id="fRole" value="Собственник / руководитель"></label>
           <label>Что нужно<select id="fRequest"><option>Полная диагностика бизнеса</option><option>Разбор отдельного решения</option><option>90 дней изменений</option></select></label>
         </div>
@@ -107,6 +108,7 @@
         const saved=await post('/api/leads',{
           company:'Aluminstar',
           legalName:'ООО «Завод СПК Звезда»',
+          inn:document.getElementById('fInn').value,
           source:'Рейтинг потенциальных клиентов BX → персональная диагностика',
           sourceType:'Целевой список',
           rank:1,
@@ -132,7 +134,7 @@
         <div>
           <div class="eyebrow">ЗАЯВКА ПРИНЯТА И СОХРАНЕНА</div>
           <h2>Создан лид ${esc(lead.id)}</h2>
-          <p>Система связала заявку с диагностикой, проверила дубликаты, присвоила приоритет и сохранила историю.</p>
+          <p>Система связала заявку с диагностикой, проверила дубликаты, присвоила приоритет, выполнила внешний финансовый анализ по ИНН и сохранила историю.</p>
           <div class="demoSavedGrid">
             <div><span>Этап</span><b>${esc(lead.stage)}</b></div>
             <div><span>Квалификация</span><b>${esc(lead.qualification)}</b></div>
@@ -156,10 +158,45 @@
       const data=await get('/api/leads');
       const alum=data.leads.find(x=>x.demoKey==='aluminstar') || data.leads[0];
       if(!alum) throw new Error('Демо-лид не найден');
+      if(!alum.research || alum.research.status!=='готово'){
+        try{
+          const rr=await post('/api/company-research',{company:'Aluminstar',legalName:'ООО «Завод СПК Звезда»',inn:'7724406329'});
+          alum.research=rr.research;
+        }catch(e){}
+      }
       document.getElementById('crmLoading').outerHTML = crmContent(alum,data.storage);
     }catch(e){
       document.getElementById('crmLoading').innerHTML='<h3>Не удалось загрузить лиды</h3><p>'+esc(e.message)+'</p>';
     }
+  }
+
+
+  function researchContent(research){
+    if(!research || research.status!=='готово'){
+      return `<div class="panel crmResearch"><div class="eyebrow">АВТОАНАЛИЗ КОМПАНИИ</div><h2>Недостаточно данных</h2><p>Для автоматического финансового анализа нужен корректный ИНН.</p></div>`;
+    }
+    return `<div class="panel crmResearch">
+      <div class="crmResearchHead">
+        <div><div class="eyebrow">АВТОАНАЛИЗ ИЗ ОТКРЫТЫХ ИСТОЧНИКОВ</div><h2>Финансовый снимок компании</h2></div>
+        ${badge('уверенность: '+research.confidence,research.confidence==='высокая'?'green':'amber')}
+      </div>
+      <div class="researchMetrics">
+        ${(research.metrics||[]).map(m=>`<div class="researchMetric"><span>${esc(m.label)}</span><b class="${m.tone==='bad'?'redText':m.tone==='warn'?'amberText':m.tone==='good'?'greenText':''}">${esc(m.value)}</b></div>`).join('')}
+      </div>
+      <div class="researchGrid">
+        <div><div class="eyebrow">ЧТО ВИДИТ СИСТЕМА</div><div class="researchSignals">
+          ${(research.signals||[]).map(x=>`<div class="researchSignal ${x.tone}"><b>${esc(x.title)}</b><span>${esc(x.text)}</span></div>`).join('')}
+        </div></div>
+        <div><div class="eyebrow">ГИПОТЕЗЫ ДЛЯ ПЕРВОЙ ВСТРЕЧИ</div><ol class="researchIdeas">
+          ${(research.hypotheses||[]).map(x=>`<li>${esc(x)}</li>`).join('')}
+        </ol></div>
+      </div>
+      <div class="researchSources">
+        <b>Источники:</b>
+        ${(research.sources||[]).map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)} ↗</a>`).join('')}
+      </div>
+      <p class="researchCaveat">${esc(research.caveat)}</p>
+    </div>`;
   }
 
   function crmContent(lead,storage){
@@ -199,10 +236,11 @@
         </div>
       </div>
 
+      ${researchContent(lead.research)}
       <div class="panel crmArchitecture">
         <div class="eyebrow">ЧТО СОХРАНЯЕТСЯ В БАЗЕ</div>
         <div class="architectureFlow">
-          <span>Источник лида</span><b>→</b><span>Компания</span><b>→</b><span>Результат диагностики</span><b>→</b><span>Приоритет</span><b>→</b><span>Этап продажи</span><b>→</b><span>История действий</span>
+          <span>Источник лида</span><b>→</b><span>Компания + ИНН</span><b>→</b><span>Диагностика</span><b>→</b><span>Открытые данные</span><b>→</b><span>Финансовый анализ</span><b>→</b><span>Гипотезы решений</span><b>→</b><span>Этап продажи</span>
         </div>
         <p>Когда мы подключим боевую CRM, эта же карточка сможет автоматически уходить менеджеру, создавать задачу, запускать уведомление и сохранять дальнейшую историю общения.</p>
       </div>`;
