@@ -2,396 +2,381 @@
 const app = document.getElementById('app');
 const path = location.pathname.replace(/\/$/,'') || '/';
 
-const status = (label, cls='go') => `<span class="status ${cls}">${label}</span>`;
-const btns = () => `<div class="actions"><a class="btn primary" href="/quick-scan">ПРОЙТИ BX QUICK SCAN →</a><a class="btn ghost" href="/sample-report">ПОСМОТРЕТЬ ПРИМЕР X-RAY</a></div>`;
-const pageHero = (ey,title,lead) => `<section class="pagehero shell"><div class="crumb">BX / ${ey}</div><div class="eyebrow">${ey}</div><h1>${title}</h1><p class="lead">${lead}</p>${btns()}</section>`;
-
-const problemCards = [
-  ['01','Выручка растёт. Денег больше не становится.'],
-  ['02','Продажи выполняют план. EBITDA падает.'],
-  ['03','Компания прибыльна. Cash заканчивается.'],
-  ['04','Маркетинг даёт лиды. Продажи не конвертируют.'],
-  ['05','Компания растёт. Собственник становится ограничением.'],
-  ['06','Каждый директор объясняет проблему по-разному.']
-];
-
-const mapCells = [
-  ['Finance','74','good'],['Cash & WC','41','bad'],['Commercial','58','warn'],['Marketing','66','warn'],
-  ['Operations','81','good'],['Market','76','good'],['People','63','warn'],['Technology','55','warn'],
-  ['Tax','88','good'],['Legal & Risk','72','good'],['Investment','47','bad'],['Execution','61','warn']
-];
+const state = (label, cls='warn') => `<span class="state ${cls}">${label}</span>`;
+const buttons = () => `<div class="actions"><a class="btn primary" href="/quick-scan">НАЧАТЬ ДИАГНОСТИКУ →</a><a class="btn ghost" href="/sample-report">ПОСМОТРЕТЬ ПРИМЕР</a></div>`;
+const pageHero = (section,title,lead) => `<section class="pagehero shell"><div class="crumb">BX / ${section}</div><div class="eyebrow">${section}</div><h1>${title}</h1><p class="lead">${lead}</p>${buttons()}</section>`;
 
 function home(){
   app.innerHTML = `
   <section class="hero shell">
     <div>
-      <div class="eyebrow">ВИДИМ БИЗНЕС ТАК, КАК ЕГО ДОЛЖЕН ВИДЕТЬ СОБСТВЕННИК</div>
-      <h1>Узнайте, где ваш бизнес теряет деньги.</h1>
-      <p class="lead">Business X-Ray соединяет финансы, продажи, операции, рынок, людей, налоги и риски в одну экономическую картину — и показывает, какое решение стоит принять первым.</p>
-      ${btns()}
-      <div class="micro">Предварительный Scan — без регистрации. Финансовый эффект рассчитывается только после получения данных компании.</div>
+      <div class="eyebrow">ДИАГНОСТИКА БИЗНЕСА ДЛЯ СОБСТВЕННИКА</div>
+      <h1>Показываем, где бизнес теряет деньги и что делать первым.</h1>
+      <p class="lead">BX собирает разрозненные данные в одну понятную картину: что происходит, почему это происходит, какое решение принять и какой эффект оно может дать.</p>
+      ${buttons()}
+      <div class="micro">Без сложных терминов и ложной точности. Сначала смысл, потом цифры.</div>
     </div>
-    <div class="panel heroCard">
-      <div class="scoreline">
-        <div><div class="eyebrow">BX SCORE</div><div class="score">64<small>/100</small></div></div>
-        ${status('GO WITH CONDITIONS')}
+    <div class="panel heroVisual">
+      <div class="eyebrow">КАК РАБОТАЕТ BX</div>
+      <div class="simpleFlow" style="margin-top:18px">
+        <div class="flowStep"><div class="flowIcon">◌</div><div><strong>Что происходит?</strong><span>Собираем факты из разных частей бизнеса</span></div><b>1</b></div>
+        <div class="flowArrow">↓</div>
+        <div class="flowStep"><div class="flowIcon">⌁</div><div><strong>Почему?</strong><span>Находим корневую причину, а не симптом</span></div><b>2</b></div>
+        <div class="flowArrow">↓</div>
+        <div class="flowStep"><div class="flowIcon">◇</div><div><strong>Что делать?</strong><span>Сравниваем варианты и риски</span></div><b>3</b></div>
+        <div class="flowArrow">↓</div>
+        <div class="flowStep"><div class="flowIcon">↗</div><div><strong>Что изменится?</strong><span>Связываем решение с деньгами и результатом</span></div><b>4</b></div>
       </div>
-      <div class="metricRows">
-        <div class="metricRow"><span>Data confidence</span><b>MEDIUM</b></div>
-        <div class="metricRow"><span>Identified EBITDA upside</span><b>₽38–52M</b></div>
-        <div class="metricRow"><span>Potential cash release</span><b>₽21–29M</b></div>
-        <div class="metricRow"><span>Critical findings</span><b>7</b></div>
-      </div>
-      <div class="kpis">
-        <div class="kpi"><strong class="greenText">+19%</strong><span>possible EBITDA uplift</span></div>
-        <div class="kpi"><strong class="amberText">3</strong><span>priority actions</span></div>
-        <div class="kpi"><strong>82%</strong><span>top finding confidence</span></div>
-      </div>
+      <div class="heroNote"><b>Главный принцип</b><span>Не выдавать больше информации. Помогать принять более качественное решение.</span></div>
     </div>
   </section>
 
   <section class="section"><div class="shell">
-    <div class="sectionHead"><div><div class="eyebrow">01 · ПРОБЛЕМА</div><h2>В бизнесе редко отсутствуют данные.</h2></div>
-    <p class="sectionIntro">Обычно отсутствует единая картина. BX связывает разрозненные симптомы с экономикой компании и показывает, где именно уничтожается стоимость.</p></div>
-    <div class="cards">${problemCards.map(([n,t])=>`<div class="card problemCard"><div><div class="num">${n}</div><h3>${t}</h3></div><span class="arrow">↗</span></div>`).join('')}</div>
-  </div></section>
-
-  <section class="section"><div class="shell">
-    <div class="sectionHead"><div><div class="eyebrow">02 · VALUE CHAIN</div><h2>Рост выручки ещё не означает рост стоимости.</h2></div>
-    <p class="sectionIntro">Мы отслеживаем, как коммерческие решения проходят через маржу, прибыль, cash и в конечном счёте влияют на стоимость бизнеса.</p></div>
-    <div class="chain">
-      ${[['Revenue','+10%','up'],['Gross Profit','−2%','flat'],['EBITDA','−8%','down'],['Net Profit','−12%','down'],['Cash Flow','−18%','down'],['Enterprise Value','−25%','down']].map(x=>`<div class="chainItem"><b>${x[0]}</b><div class="delta ${x[2]}">${x[1]}</div></div>`).join('')}
+    <div class="sectionHead">
+      <div><div class="eyebrow">01 · КОГДА НУЖНА ДИАГНОСТИКА</div><h2>Проблема обычно видна. Причина — нет.</h2></div>
+      <p class="sectionIntro">Собственник видит последствия в разных местах бизнеса. BX помогает связать их в одну причинно-следственную картину.</p>
     </div>
-    <div class="panel" style="padding:24px;margin-top:14px">
-      <div class="eyebrow">ILLUSTRATIVE OPPORTUNITY WATERFALL</div>
-      <div class="waterfall" style="margin-top:22px">
-        <div class="wfLabel">Current EBITDA</div><div class="wfTrack"><div class="wfBar" style="width:48%">₽118M</div></div>
-        <div class="wfLabel">Pricing</div><div class="wfTrack"><div class="wfBar green" style="width:66%">+₽21–31M</div></div>
-        <div class="wfLabel">Procurement</div><div class="wfTrack"><div class="wfBar green" style="width:44%">+₽12–17M</div></div>
-        <div class="wfLabel">Sales productivity</div><div class="wfTrack"><div class="wfBar green" style="width:52%">+₽14–20M</div></div>
-        <div class="wfLabel">Inventory cash</div><div class="wfTrack"><div class="wfBar green" style="width:58%">+₽18–24M Cash</div></div>
-      </div>
+    <div class="visualProblems">
+      ${[
+        ['₽','Выручка растёт, а денег больше не становится.'],
+        ['↘','Продажи есть, а прибыль снижается.'],
+        ['◫','Запасы и дебиторская задолженность забирают деньги.'],
+        ['◎','Реклама работает, а сделки не закрываются.'],
+        ['⌘','Без собственника многие решения останавливаются.'],
+        ['?','Руководители называют разные причины одной проблемы.']
+      ].map(x=>`<div class="card problemCard"><div class="problemMark">${x[0]}</div><h3>${x[1]}</h3><div class="problemLink">BX ищет связь</div></div>`).join('')}
     </div>
   </div></section>
 
   <section class="section"><div class="shell">
-    <div class="sectionHead"><div><div class="eyebrow">03 · BUSINESS MAP</div><h2>Просвечиваем всю систему бизнеса.</h2></div>
-    <p class="sectionIntro">Не «аудит отдела продаж» и не «финансовый анализ» по отдельности. BX смотрит, как 12 функциональных зон связаны друг с другом и с деньгами.</p></div>
-    <div class="businessMap">
-      <div class="panel mapPanel">
-        <div class="centerValue"><div><div class="eyebrow">NORTH STAR</div><strong>Free Cash Flow</strong></div><div class="goldText">→ Enterprise Value</div></div>
-        <div class="mapGrid">${mapCells.map(x=>`<div class="mapCell ${x[2]}"><b>${x[0]}</b><strong>${x[1]}</strong></div>`).join('')}</div>
+    <div class="sectionHead">
+      <div><div class="eyebrow">02 · ЛОГИКА РЕШЕНИЯ</div><h2>Не просто «найти проблему». Понять, к чему она приводит.</h2></div>
+      <p class="sectionIntro">Вместо десятков показателей BX показывает цепочку: симптом → причина → решение → ожидаемый результат.</p>
+    </div>
+    <div class="causeMap">
+      <div class="causeBox"><small>СИМПТОМ</small><h3>Денег постоянно не хватает</h3><p>При этом компания формально прибыльна.</p></div>
+      <div class="causeArrow">→</div>
+      <div class="causeBox"><small>ПРИЧИНА</small><h3>Деньги застряли в запасах и оплатах клиентов</h3><p>Рост продаж финансируется из оборотных средств.</p></div>
+      <div class="causeArrow">→</div>
+      <div class="causeBox"><small>РЕШЕНИЕ</small><h3>Изменить правила запасов и оплаты</h3><p>Сначала высвободить деньги, затем ускорять рост.</p></div>
+    </div>
+  </div></section>
+
+  <section class="section"><div class="shell">
+    <div class="sectionHead">
+      <div><div class="eyebrow">03 · КАРТА БИЗНЕСА</div><h2>Видим не отделы по отдельности, а всю систему.</h2></div>
+      <p class="sectionIntro">Шесть крупных зон связаны между собой. Цвет показывает состояние, а не абстрактный балл.</p>
+    </div>
+    <div class="mapWrap">
+      <div class="panel businessMap">
+        <div class="mapTitle">
+          <div><div class="eyebrow">ОБЩАЯ КАРТИНА</div><h3>Где сейчас теряется устойчивость</h3></div>
+          <div class="legend"><span><i class="dot" style="background:var(--good)"></i>Норма</span><span><i class="dot" style="background:var(--warn)"></i>Внимание</span><span><i class="dot" style="background:var(--bad)"></i>Риск</span></div>
+        </div>
+        <div class="mapVisual">
+          <div class="mapLine l1"></div><div class="mapLine l2"></div><div class="mapLine l3"></div><div class="mapLine l4"></div><div class="mapLine l5"></div><div class="mapLine l6"></div>
+          <div class="mapCenter"><div><strong>Здоровье бизнеса</strong><span>деньги · прибыль · устойчивость</span></div></div>
+          <div class="mapNode good n1"><b>Финансы</b><small>картина понятна</small></div>
+          <div class="mapNode warn n2"><b>Продажи</b><small>есть потери в марже</small></div>
+          <div class="mapNode bad n3"><b>Денежный поток</b><small>деньги застревают</small></div>
+          <div class="mapNode good n4"><b>Операции</b><small>работают устойчиво</small></div>
+          <div class="mapNode warn n5"><b>Команда</b><small>зависимость от собственника</small></div>
+          <div class="mapNode unknown n6"><b>Рынок и риски</b><small>нужно больше данных</small></div>
+        </div>
       </div>
       <div class="sideStack">
-        <div class="card"><div class="eyebrow">CRITICAL CONSTRAINT</div><h3>Cash conversion cycle</h3><p>Рост запасов и DSO забирают ликвидность быстрее, чем растёт EBITDA.</p><div class="impact" style="margin-top:24px">₽31–47M cash</div></div>
-        <div class="card"><div class="eyebrow">UNKNOWN</div><h3>Нет подтверждённой эластичности цены</h3><p>BX не будет выдавать уверенный pricing recommendation до проверки гипотезы.</p>${status('INSUFFICIENT EVIDENCE','amber')}</div>
-        <div class="card"><div class="eyebrow">NEXT BEST ACTION</div><h3>14-дневный pricing pilot</h3><p>Два сегмента. +3% к цене. Kill criterion: conversion decline > 7%.</p></div>
+        <div class="card insight"><div class="eyebrow">ГЛАВНЫЙ РИСК</div><h3>Деньги застревают внутри бизнеса</h3><p>Основная проблема не в объёме продаж, а в том, как быстро выручка превращается в свободные деньги.</p>${state('требует внимания','bad')}</div>
+        <div class="card insight"><div class="eyebrow">ЧЕГО МЫ ПОКА НЕ ЗНАЕМ</div><h3>Можно ли безопасно повысить цены</h3><p>Данных недостаточно. Вместо уверенного совета BX предлагает проверку на небольшом сегменте.</p>${state('нужна проверка','unknown')}</div>
+        <div class="card insight"><div class="eyebrow">ПЕРВЫЙ ШАГ</div><h3>Освободить деньги из оборота</h3><p>До агрессивного роста стоит восстановить управляемость запасов и условий оплаты.</p>${state('приоритет','warn')}</div>
       </div>
     </div>
   </div></section>
 
   <section class="section"><div class="shell">
-    <div class="sectionHead"><div><div class="eyebrow">04 · EVIDENCE SYSTEM</div><h2>Каждый вывод должен выдержать вопрос: «Откуда вы это знаете?»</h2></div>
-    <p class="sectionIntro">BX разделяет факты, расчёты, внешние данные, предположения и экспертное суждение — и показывает уровень уверенности.</p></div>
-    <div class="evidence">
-      <div class="panel confidence"><div><div class="big">82%</div><div class="eyebrow">CONFIDENCE</div></div></div>
-      <div class="card"><div class="eyebrow">FINDING BX-04</div><h3 style="font-size:26px">Высокая доля скидок уничтожает маржу в корпоративном канале.</h3>
-        <div class="tags"><span class="tag">FACT</span><span class="tag">CALCULATION</span><span class="tag">CRM DATA</span><span class="tag">ASSUMPTION</span></div>
-        <div class="metricRows"><div class="metricRow"><span>Primary evidence</span><b>18,420 deals</b></div><div class="metricRow"><span>Period</span><b>12 months</b></div><div class="metricRow"><span>Owner</span><b>CCO</b></div></div>
-      </div>
-      <div class="card"><div class="eyebrow">FINANCIAL IMPACT</div><div class="impact" style="margin-top:18px">₽14–19M<br>EBITDA</div><p style="margin-top:18px">Next action: rebuild discount architecture and validate elasticity on two segments.</p></div>
+    <div class="sectionHead">
+      <div><div class="eyebrow">04 · ДОКАЗАТЕЛЬСТВА</div><h2>Каждый вывод должен отвечать на вопрос: «Откуда мы это знаем?»</h2></div>
+      <p class="sectionIntro">Мы отделяем подтверждённые факты от предположений. Если данных не хватает — прямо так и говорим.</p>
+    </div>
+    <div class="proofGrid">
+      <div class="panel proof"><div class="proofIcon">✓</div><div class="eyebrow">ФАКТ</div><h3>Скидки выше нормы</h3><p>Подтверждено данными по сделкам за последние 12 месяцев.</p></div>
+      <div class="panel proof"><div class="proofIcon">⌁</div><div class="eyebrow">ВЫВОД</div><h3>Компания теряет прибыль в корпоративном канале</h3><p>Причина не в слабом спросе, а в слишком свободной политике скидок.</p></div>
+      <div class="panel proof"><div class="proofIcon">→</div><div class="eyebrow">ДЕЙСТВИЕ</div><h3>Изменить правила скидок</h3><p>Сначала проверить новую модель на двух группах клиентов.</p></div>
     </div>
   </div></section>
 
   <section class="section"><div class="shell">
-    <div class="sectionHead"><div><div class="eyebrow">05 · BX PARTNER BOARD</div><h2>Одно решение. Несколько независимых взглядов.</h2></div>
-    <p class="sectionIntro">Board не ищет подтверждение идеи собственника. Он атакует гипотезу с разных функциональных позиций до принятия решения.</p></div>
-    <div class="boardGrid">
-      <div class="panel boardCard"><div class="eyebrow">COMMERCIAL</div><h3>Снизить цену на 8%</h3><div class="vote greenText">FOR · ускорит продажи</div></div>
-      <div class="panel boardCard"><div class="eyebrow">CFO</div><h3>Маржа не выдерживает</h3><div class="vote redText">AGAINST · EBITDA dilution</div></div>
-      <div class="panel boardCard"><div class="eyebrow">OPERATIONS</div><h3>Capacity уже близок к пределу</h3><div class="vote redText">AGAINST · execution risk</div></div>
-      <div class="panel boardCard"><div class="eyebrow">MARKET</div><h3>Цена не главный constraint</h3><div class="vote amberText">CHALLENGE · demand evidence weak</div></div>
-      <div class="panel boardCard"><div class="eyebrow">RED TEAM</div><h3>Гипотеза не доказана</h3><div class="vote redText">ATTACK · test before scale</div></div>
-      <div class="panel boardCard"><div class="eyebrow">DATA & EVIDENCE</div><h3>Confidence 61%</h3><div class="vote amberText">CONDITION · more evidence needed</div></div>
-      <div class="panel decision"><div><div class="eyebrow">INVESTMENT COMMITTEE DECISION</div><strong>PILOT</strong><p>Тест −3% на двух сегментах. Kill criterion: conversion uplift &lt; 12%.</p></div>${status('REVIEW IN 14 DAYS','amber')}</div>
+    <div class="sectionHead">
+      <div><div class="eyebrow">05 · СОВЕТ BX</div><h2>Хорошее решение должно выдержать несогласие.</h2></div>
+      <p class="sectionIntro">Финансы, продажи, операции, рынок и независимый критик рассматривают одну идею с разных сторон.</p>
+    </div>
+    <div class="council">
+      <div class="panel opinion"><div class="who">ПРОДАЖИ</div><h3>Снизить цену</h3><p>Это может ускорить сделки.</p>${state('за','good')}</div>
+      <div class="panel opinion"><div class="who">ФИНАНСЫ</div><h3>Не спешить</h3><p>Снижение цены может слишком сильно ударить по прибыли.</p>${state('против','bad')}</div>
+      <div class="panel opinion"><div class="who">РЫНОК</div><h3>Проверить причину</h3><p>Нет доказательств, что цена — главный барьер покупки.</p>${state('нужна проверка','warn')}</div>
+      <div class="panel finalDecision"><div><div class="eyebrow">РЕШЕНИЕ СОВЕТА</div><strong>Не масштабировать. Сначала проверить.</strong><p>Провести ограниченный тест на двух группах клиентов и сравнить результат.</p></div><div class="decisionBadge">ПРОВЕРКА 14 ДНЕЙ</div></div>
     </div>
   </div></section>
 
   <section class="section"><div class="shell">
-    <div class="sectionHead"><div><div class="eyebrow">06 · PRODUCT SYSTEM</div><h2>Начать с одного вопроса. Продолжить системой управления бизнесом.</h2></div>
-    <p class="sectionIntro">BX развивается от быстрой диагностики к постоянному operating intelligence для собственника.</p></div>
+    <div class="sectionHead">
+      <div><div class="eyebrow">06 · КАК МОЖНО НАЧАТЬ</div><h2>От быстрой проверки — к постоянной системе управления решениями.</h2></div>
+      <p class="sectionIntro">Каждый следующий уровень нужен только тогда, когда предыдущий дал основание двигаться глубже.</p>
+    </div>
     <div class="productGrid">
       ${[
-        ['01','BX Quick Scan','Предварительная картина за несколько минут.','/quick-scan'],
-        ['02','Business X-Ray','Полная диагностика, экономика, риски и приоритеты.','/xray'],
-        ['03','BX Partner Board','Разбор отдельной инвестиционной или бизнес-гипотезы.','/board'],
-        ['04','BX 90','90-дневный execution sprint после диагностики.','/solutions/execution'],
-        ['05','BX Operating Partner','Постоянная работа с собственником и топ-командой.','/solutions/operating-partner'],
-        ['06','BX Intelligence','Always-on рынок, сигналы и внешние риски.','/intelligence']
-      ].map(x=>`<a class="panel product" href="${x[3]}"><small>${x[0]}</small><h3>${x[1]}</h3><p>${x[2]}</p><div class="arrow">Открыть →</div></a>`).join('')}
-    </div>
-  </div></section>
-
-  <section class="section"><div class="shell">
-    <div class="sectionHead"><div><div class="eyebrow">07 · CASE LOGIC</div><h2>Рекомендация важна только тогда, когда понятен её фактический эффект.</h2></div>
-    <p class="sectionIntro">В кейсах BX мы отдельно показываем identified, approved, implemented и realized effect — без смешивания прогноза и факта.</p></div>
-    <div class="caseStrip">
-      <div class="panel caseHero"><div class="eyebrow">ILLUSTRATIVE CASE · INDUSTRIAL COMPANY</div><h3>Рост выручки без роста cash</h3>
-        <div class="caseMetrics"><div class="caseMetric"><strong>₽84M</strong><span>identified EBITDA</span></div><div class="caseMetric"><strong>₽47M</strong><span>cash release</span></div><div class="caseMetric"><strong>14 w</strong><span>to first result</span></div></div>
-        <div class="actions"><a class="btn ghost" href="/sample-report">ОТКРЫТЬ ДЕМО-КЕЙС →</a></div>
-      </div>
-      <div class="feed">
-        <div class="feedItem"><small>IDENTIFIED</small><h4>Pricing architecture</h4><div class="goldText">₽24–31M EBITDA</div></div>
-        <div class="feedItem"><small>IMPLEMENTED</small><h4>Inventory policy</h4><div class="greenText">₽18M cash released</div></div>
-        <div class="feedItem"><small>REALIZED</small><h4>Sales productivity</h4><div class="greenText">+11% GP / FTE</div></div>
-      </div>
-    </div>
-  </div></section>
-
-  <section class="section"><div class="shell">
-    <div class="sectionHead"><div><div class="eyebrow">08 · BX INTELLIGENCE</div><h2>Новости заканчиваются не пересказом, а действием.</h2></div>
-    <p class="sectionIntro">Каждый материал отвечает: что произошло, кого затронет, какой cash/risk implication и что должен сделать собственник.</p></div>
-    <div class="cards">
-      <div class="card"><div class="eyebrow">BX SIGNAL</div><h3>Изменение стоимости капитала</h3><p>Что это значит для инвестиционного hurdle rate и M&A.</p></div>
-      <div class="card"><div class="eyebrow">BOARD VIEW</div><h3>Новый отраслевой риск</h3><p>Market × CFO × Legal perspective в одном решении.</p></div>
-      <div class="card"><div class="eyebrow">INDUSTRY PULSE</div><h3>Спрос, цены, capacity</h3><p>Только показатели, которые меняют решения собственника.</p></div>
+        ['Быстрая диагностика','Несколько минут. Показывает, где стоит искать глубже.','/quick-scan'],
+        ['Полная диагностика','Разбираем бизнес по данным, причинам и экономическому эффекту.','/xray'],
+        ['Совет BX','Проверяем отдельное крупное решение перед запуском.','/board'],
+        ['90 дней изменений','Помогаем внедрить несколько самых важных решений.','/solutions/execution'],
+        ['Партнёр собственника','Регулярно помогаем принимать сложные управленческие решения.','/solutions/operating-partner'],
+        ['Аналитика BX','Следим за рынком и внешними изменениями, которые влияют на бизнес.','/intelligence']
+      ].map((x,i)=>`<a class="panel product" href="${x[2]}"><div class="eyebrow">0${i+1}</div><h3>${x[0]}</h3><p>${x[1]}</p><div class="arrow">Подробнее →</div></a>`).join('')}
     </div>
   </div></section>
 
   <section class="section tight"><div class="shell">
-    <div class="panel" style="padding:34px;display:grid;grid-template-columns:1.2fr .8fr;gap:28px;align-items:center">
-      <div><div class="eyebrow">START HERE</div><h2 style="margin-top:8px">Не нужен ещё один отчёт. Нужна более качественная следующая ставка.</h2></div>
-      <div><p class="sectionIntro">Начните с предварительного Scan. Он не обещает магическую точность — он показывает, где стоит копать глубже.</p>${btns()}</div>
+    <div class="panel" style="padding:34px;background:linear-gradient(135deg,#e6f2f0,#ffffff)">
+      <div class="eyebrow">НАЧАТЬ С ПРОСТОГО</div>
+      <h2 style="margin-top:8px">Сначала понять, где действительно проблема.</h2>
+      <p class="sectionIntro">Быстрая диагностика не обещает точный денежный эффект. Она помогает определить, куда направить внимание.</p>
+      ${buttons()}
     </div>
   </div></section>`;
 }
 
 function xray(){
-  app.innerHTML = pageHero('PRODUCT','Business X-Ray','Полная диагностика компании с позиции собственника и инвестора: где создаётся стоимость, где она уничтожается и какое действие даст максимальный эффект первым.') + `
+  app.innerHTML = pageHero('ПОЛНАЯ ДИАГНОСТИКА','Понятная картина бизнеса вместо набора разрозненных отчётов.','Мы связываем финансы, продажи, процессы, команду, рынок и риски, чтобы собственник видел не только проблему, но и последовательность действий.') + `
   <section class="section"><div class="shell">
-    <div class="sectionHead"><div><div class="eyebrow">INPUT → ENGINE → OUTPUT</div><h2>Диагностика превращает разрозненные данные в решение.</h2></div><p class="sectionIntro">BX не ограничивается score. Результат — экономическая карта бизнеса, перечень доказанных проблем и roadmap с owners, сроками и kill criteria.</p></div>
-    <div class="cards">
-      <div class="card"><div class="eyebrow">INPUT</div><h3>Data room</h3><p>Financials, CRM, sales, marketing, people, operations, contracts, interviews, market.</p></div>
-      <div class="card"><div class="eyebrow">ENGINE</div><h3>BX Board + Evidence Layer</h3><p>Независимые функциональные заключения, conflict matrix, Red Team и инвестиционное решение.</p></div>
-      <div class="card"><div class="eyebrow">OUTPUT</div><h3>Economic Action Map</h3><p>BX Score, critical findings, opportunity map, risks, 30/90/365 roadmap, expected impact.</p></div>
+    <div class="causeMap">
+      <div class="causeBox"><small>1 · СОБИРАЕМ</small><h3>Факты</h3><p>Финансы, продажи, процессы, команда, договоры и рынок.</p></div>
+      <div class="causeArrow">→</div>
+      <div class="causeBox"><small>2 · СВЯЗЫВАЕМ</small><h3>Причины</h3><p>Понимаем, что на что влияет и где находится корень проблемы.</p></div>
+      <div class="causeArrow">→</div>
+      <div class="causeBox"><small>3 · РЕШАЕМ</small><h3>Приоритеты</h3><p>Выбираем действия с лучшим соотношением эффекта, скорости и риска.</p></div>
     </div>
   </div></section>
-  <section class="section"><div class="shell">
-    <div class="sectionHead"><div><div class="eyebrow">DELIVERY</div><h2>Как проходит X-Ray.</h2></div><p class="sectionIntro">Формат будет зависеть от масштаба и качества данных, но логика всегда одинакова: сначала доказательства, потом выводы.</p></div>
+  <section class="section"><div class="shell"><div class="sectionHead"><div><div class="eyebrow">КАК ПРОХОДИТ РАБОТА</div><h2>Шесть понятных этапов.</h2></div><p class="sectionIntro">Без длинного отчёта ради отчёта. Каждый этап должен приводить к более ясному решению.</p></div>
     <div class="timeline">
       ${[
-        ['01','Intake & Data Confidence','Фиксируем вопрос собственника, data room и качество исходных данных.'],
-        ['02','Functional Diagnostics','CFO, Commercial, Operations, Market, People, Tax, Legal, Investment анализируют компанию независимо.'],
-        ['03','Conflict Matrix','Собираем расхождения между функциями, экономикой и управленческой логикой.'],
-        ['04','Red Team','Атакуем наиболее привлекательные гипотезы и проверяем downside.'],
-        ['05','Investment Committee','GO / GO WITH CONDITIONS / PILOT / HOLD / NO-GO по каждой ключевой ставке.'],
-        ['06','90-Day Action Map','Owners, сроки, инвестиции, expected effect, kill criteria и система фактического контроля.']
-      ].map(x=>`<div class="timelineStep"><div class="n">${x[0]}</div><div><h3>${x[1]}</h3><p>${x[2]}</p></div></div>`).join('')}
+        ['01','Определяем главный вопрос','Что собственник хочет понять или решить.'],
+        ['02','Проверяем данные','Каким цифрам можно доверять, а где есть пробелы.'],
+        ['03','Разбираем причины','Финансы, продажи, процессы, команда и рынок смотрятся вместе.'],
+        ['04','Сравниваем мнения','Разные специалисты независимо оценивают одну ситуацию.'],
+        ['05','Проверяем на прочность','Ищем слабые места и причины отказаться от привлекательной идеи.'],
+        ['06','Формируем план','Что делать, кто отвечает, когда проверить результат и когда остановиться.']
+      ].map(x=>`<div class="timelineStep"><div class="n">${x[0].slice(1)}</div><div><h3>${x[1]}</h3><p>${x[2]}</p></div></div>`).join('')}
     </div>
   </div></section>`;
 }
 
 function board(){
-  app.innerHTML = pageHero('BX PARTNER BOARD','Решение должно пережить конфликт.','BX Board собирает несколько независимых функциональных позиций, затем запускает Red Team и только после этого формирует решение для собственника.') + `
-  <section class="section"><div class="shell"><div class="boardGrid">
-    ${['Managing Partner','CFO','Commercial','Operations','Market Intelligence','Tax & Accounting','People & Organization','Investment & M&A','Data & Evidence','Legal & Regulatory','Delivery PMO','Red Team / Auditor'].map((x,i)=>`<div class="panel boardCard"><div class="eyebrow">AGENT ${String(i+1).padStart(2,'0')}</div><h3>${x}</h3><p class="muted">${i===11?'Ищет причины отказаться от идеи и атакует слабые допущения.':'Формирует независимую позицию в пределах своей функции.'}</p></div>`).join('')}
-    <div class="panel decision"><div><div class="eyebrow">BOARD OUTPUT</div><strong>GO / PILOT / HOLD</strong><p>Решение всегда сопровождается условиями, evidence, owners и критериями пересмотра.</p></div>${status('BOARD PROTOCOL','green')}</div>
-  </div></div></section>`;
-}
-
-function cases(){
-  app.innerHTML = pageHero('CASES','Результат нельзя смешивать с прогнозом.','В каждом кейсе BX отдельно фиксирует identified, approved, implemented и realized effect — чтобы собственник видел, что действительно произошло.') + `
+  app.innerHTML = pageHero('СОВЕТ BX','Несколько независимых взглядов на одно решение.','Совет BX нужен там, где ставка слишком велика, чтобы принимать решение на основе одного мнения.') + `
   <section class="section"><div class="shell">
-    <div class="cards">
+    <div class="council">
       ${[
-        ['Industrial','Cash trapped in inventory','₽31–47M','PILOT'],
-        ['B2B Services','Discount leakage','₽14–19M EBITDA','GO'],
-        ['Retail','Low-performing SKU architecture','₽22–34M GP','GO WITH CONDITIONS'],
-        ['Fitness','Sales productivity','+17% GP / FTE','PILOT'],
-        ['Distribution','Working capital','−11 days CCC','GO'],
-        ['Owner-led company','Management bottleneck','3 decisions delegated','HOLD → PILOT']
-      ].map(x=>`<div class="card problemCard"><div><div class="eyebrow">${x[0]}</div><h3>${x[1]}</h3><div class="impact" style="font-size:22px;margin-top:15px">${x[2]}</div></div><div class="conflictLine">${status(x[3],x[3]==='GO'?'green':'amber')}</div></div>`).join('')}
+        ['Управляющий партнёр','Собирает вопрос и держит фокус на интересе собственника.'],
+        ['Финансы','Проверяет влияние на прибыль, деньги и устойчивость.'],
+        ['Продажи','Проверяет спрос, цену, воронку и коммерческий потенциал.'],
+        ['Операции','Смотрит, можно ли реально выполнить решение.'],
+        ['Рынок','Проверяет внешнюю среду и поведение клиентов.'],
+        ['Команда','Оценивает людей, роли и зависимость от ключевых сотрудников.'],
+        ['Налоги и учёт','Проверяет налоговые и учётные последствия.'],
+        ['Право и риски','Ищет юридические ограничения и риски.'],
+        ['Инвестиции','Сравнивает вложения, отдачу и альтернативы.'],
+        ['Данные','Проверяет качество доказательств и пробелы.'],
+        ['Внедрение','Проверяет сроки, ресурсы и ответственность.'],
+        ['Независимый критик','Ищет причины, почему идея может не сработать.']
+      ].map(x=>`<div class="panel opinion"><div class="who">${x[0]}</div><h3>${x[1]}</h3></div>`).join('')}
+      <div class="panel finalDecision"><div><div class="eyebrow">РЕЗУЛЬТАТ</div><strong>Запускать · проверить · отложить · отказаться</strong><p>Каждое решение сопровождается условиями, рисками и датой пересмотра.</p></div><div class="decisionBadge">ОДНО РЕШЕНИЕ</div></div>
     </div>
   </div></section>`;
 }
 
-function intelligence(){
-  app.innerHTML = pageHero('BX INTELLIGENCE','Информация становится полезной только тогда, когда меняет решение.','BX Intelligence превращает новости, рыночные сдвиги и внешние риски в owner-level implications: деньги, риск, opportunity и recommended action.') + `
+function cases(){
+  app.innerHTML = pageHero('КЕЙСЫ','Показываем не красивые обещания, а путь от проблемы до результата.','В каждом кейсе отдельно видно: что нашли, что решили, что внедрили и что реально изменилось.') + `
   <section class="section"><div class="shell"><div class="cards">
     ${[
-      ['BX Signal','Короткий сигнал: что изменилось и почему это нельзя игнорировать.'],
-      ['BX Radar','Сдвиги спроса, цен, capacity, регуляторики и конкуренции.'],
-      ['BX Research','Глубокое исследование с evidence и экономическими выводами.'],
-      ['BX Board View','Независимые позиции Board по одному событию.'],
-      ['Industry Pulse','Отраслевой health-check с ключевыми метриками.'],
-      ['CEO Brief','Еженедельная executive-сводка: что требует решения.']
-    ].map(x=>`<div class="card problemCard"><div><div class="eyebrow">${x[0]}</div><h3>${x[1]}</h3></div><span class="arrow">↗</span></div>`).join('')}
+      ['Производство','Деньги застряли в запасах','Сократили избыточные запасы и изменили правила закупки.'],
+      ['Услуги для бизнеса','Слишком большие скидки','Перестроили правила скидок и контроль маржи.'],
+      ['Розница','Слишком широкий ассортимент','Убрали позиции, которые занимали деньги и почти не давали прибыли.'],
+      ['Фитнес','Слабая отдача отдела продаж','Изменили распределение лидов и систему управления продавцами.'],
+      ['Дистрибуция','Медленный оборот денег','Сократили сроки оплаты и пересобрали политику запасов.'],
+      ['Компания собственника','Все решения идут через владельца','Часть решений передали руководителям с понятными границами ответственности.']
+    ].map(x=>`<div class="card problemCard"><div><div class="eyebrow">${x[0]}</div><h3>${x[1]}</h3><p>${x[2]}</p></div><div class="problemLink">показать логику решения</div></div>`).join('')}
+  </div></div></section>`;
+}
+
+function intelligence(){
+  app.innerHTML = pageHero('АНАЛИТИКА BX','Не просто новости. Что они меняют для собственника.','Каждый материал заканчивается конкретным выводом: какой риск появился, где возможность и требуется ли действие.') + `
+  <section class="section"><div class="shell"><div class="cards">
+    ${[
+      ['Сигнал','Коротко: что изменилось и почему это важно.'],
+      ['Обзор рынка','Спрос, цены, конкуренты и новые проекты.'],
+      ['Исследование','Глубокий разбор вопроса с источниками и выводами.'],
+      ['Мнение совета','Как одно событие видят финансы, продажи, рынок и риски.'],
+      ['Пульс отрасли','Несколько ключевых изменений без лишней информации.'],
+      ['Записка собственнику','Короткий список вопросов, которые требуют внимания на этой неделе.']
+    ].map(x=>`<div class="card problemCard"><div><div class="eyebrow">${x[0]}</div><h3>${x[1]}</h3></div><div class="problemLink">что это значит для бизнеса</div></div>`).join('')}
   </div></div></section>`;
 }
 
 function methodology(){
-  app.innerHTML = pageHero('METHODOLOGY','Уверенность должна быть доказуемой.','BX разделяет типы данных, маркирует uncertainty и заставляет каждый значимый вывод иметь источник, расчёт, owner и экономический смысл.') + `
-  <section class="section"><div class="shell">
-    <div class="cards">
-      ${[
-        ['FACT','Подтверждено первичным источником компании.'],
-        ['CALCULATION','Получено формулой из известных данных.'],
-        ['EXTERNAL DATA','Внешний рынок, исследования, публичные базы.'],
-        ['ASSUMPTION','Явно обозначенное допущение, требующее проверки.'],
-        ['EXPERT JUDGMENT','Профессиональная интерпретация, не маскируемая под факт.'],
-        ['UNKNOWN','Данных недостаточно. Решение требует дополнительной проверки.']
-      ].map(x=>`<div class="card"><div class="eyebrow">${x[0]}</div><h3>${x[1]}</h3></div>`).join('')}
-    </div>
-  </div></section>`;
-}
-
-function radarSVG(values){
-  const labels=['Finance','Cash','Sales','Ops','People','Market'];
-  const cx=160,cy=160,R=115,n=6;
-  const pts = values.map((v,i)=>{const a=-Math.PI/2+i*2*Math.PI/n;const r=R*v/100;return [cx+Math.cos(a)*r,cy+Math.sin(a)*r]});
-  const rings=[25,50,75,100].map(k=>{const p=Array.from({length:n},(_,i)=>{const a=-Math.PI/2+i*2*Math.PI/n;const r=R*k/100;return (cx+Math.cos(a)*r)+','+(cy+Math.sin(a)*r)}).join(' ');return `<polygon points="${p}" fill="none" stroke="#21323c" stroke-width="1"/>`}).join('');
-  const axes=Array.from({length:n},(_,i)=>{const a=-Math.PI/2+i*2*Math.PI/n;return `<line x1="${cx}" y1="${cy}" x2="${cx+Math.cos(a)*R}" y2="${cy+Math.sin(a)*R}" stroke="#21323c"/>`}).join('');
-  const lbl=labels.map((l,i)=>{const a=-Math.PI/2+i*2*Math.PI/n;return `<text x="${cx+Math.cos(a)*(R+27)}" y="${cy+Math.sin(a)*(R+27)}" fill="#8fa0aa" font-size="10" text-anchor="middle" dominant-baseline="middle">${l}</text>`}).join('');
-  return `<svg viewBox="0 0 320 320" width="320" height="320">${rings}${axes}<polygon points="${pts.map(p=>p.join(',')).join(' ')}" fill="rgba(216,180,106,.18)" stroke="#d8b46a" stroke-width="2"/>${pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="#f0d79a"/>`).join('')}${lbl}</svg>`;
+  app.innerHTML = pageHero('МЕТОДОЛОГИЯ','Чётко отделяем то, что знаем, от того, что предполагаем.','BX не маскирует недостаток данных под уверенный вывод. Каждый важный тезис имеет понятный уровень надёжности.') + `
+  <section class="section"><div class="shell"><div class="cards">
+    ${[
+      ['Подтверждённый факт','Есть первичный источник внутри компании.'],
+      ['Расчёт','Вывод получен из известных данных по понятной формуле.'],
+      ['Внешние данные','Использованы рынок, исследования или публичные источники.'],
+      ['Предположение','Гипотеза, которую ещё нужно проверить.'],
+      ['Экспертная оценка','Профессиональное мнение, которое не выдаётся за факт.'],
+      ['Данных недостаточно','BX прямо говорит, когда уверенный вывод делать рано.']
+    ].map(x=>`<div class="card"><div class="eyebrow">${x[0]}</div><h3>${x[1]}</h3></div>`).join('')}
+  </div></div></section>`;
 }
 
 const scanQuestions = [
-  ['Что сейчас беспокоит больше всего?',['Прибыль','Cash','Продажи','Рост'],[1,0,1,2]],
-  ['Как меняется выручка?',['Снижается','Стабильна','Растёт <15%','Растёт >15%'],[0,1,2,3]],
-  ['Как часто возникают кассовые разрывы?',['Часто','Иногда','Редко','Нет'],[0,1,2,3]],
-  ['Есть управленческий P&L по направлениям?',['Нет','Редко','Ежемесячно','Онлайн'],[0,1,2,3]],
-  ['Собственник нужен в большинстве решений?',['Да','Часто','Иногда','Нет'],[0,1,2,3]],
-  ['CRM позволяет видеть полную воронку?',['Нет','Частично','В основном','Да'],[0,1,2,3]],
-  ['Есть KPI, связанные с экономическим результатом?',['Нет','У отдельных функций','У большинства','Да, сквозные'],[0,1,2,3]],
-  ['Есть единый список приоритетных инициатив?',['Нет','Есть, но без owners','Есть owners','Есть owners + effect tracking'],[0,1,2,3]]
+  ['Что сейчас беспокоит больше всего?',['Прибыль','Деньги на счетах','Продажи','Рост']],
+  ['Как меняется выручка?',['Снижается','Почти не меняется','Растёт умеренно','Растёт быстро']],
+  ['Как часто не хватает денег на текущие платежи?',['Часто','Иногда','Редко','Практически никогда']],
+  ['Насколько понятно, какие направления действительно прибыльны?',['Практически непонятно','Есть примерная картина','Понятно по основным направлениям','Понятно регулярно и подробно']],
+  ['Насколько бизнес зависит от личного участия собственника?',['Очень сильно','Сильно','Умеренно','Незначительно']],
+  ['Насколько прозрачна работа отдела продаж?',['Почти не видна','Видна частично','В основном понятна','Полностью прозрачна']],
+  ['Есть ли у руководителей понятные показатели результата?',['Нет','Только у части','У большинства','Да, и они связаны с результатом бизнеса']],
+  ['Есть ли единый список главных изменений в работе компании?',['Нет','Есть, но без ответственных','Есть ответственные','Есть ответственные и контроль результата']]
 ];
-let scanStep=0, scanAnswers=[];
+let scanStep=0,scanAnswers=[];
 
-function scan(){
-  scanStep=0;scanAnswers=[];drawScan();
-}
+function scan(){scanStep=0;scanAnswers=[];drawScan()}
 function drawScan(){
   if(scanStep>=scanQuestions.length) return scanResult();
-  const [q,opts] = scanQuestions[scanStep];
-  app.innerHTML = `<section class="scanWrap">
-    <div class="scanHead"><div><div class="eyebrow">BX QUICK SCAN</div><div class="muted">Предварительная диагностика</div></div><b>${scanStep+1} / ${scanQuestions.length}</b></div>
-    <div class="progress"><i style="width:${(scanStep/scanQuestions.length)*100}%"></i></div>
+  const [q,opts]=scanQuestions[scanStep];
+  app.innerHTML=`<section class="scanWrap">
+    <div class="scanHead"><div><div class="eyebrow">БЫСТРАЯ ДИАГНОСТИКА</div><div style="color:var(--muted)">Предварительная оценка без регистрации</div></div><b>${scanStep+1} из ${scanQuestions.length}</b></div>
+    <div class="progress"><i style="width:${scanStep/scanQuestions.length*100}%"></i></div>
     <div class="question">${q}</div>
-    <div class="options">${opts.map((o,i)=>`<div class="option" data-i="${i}">${o}<small>0${i+1}</small></div>`).join('')}</div>
-    <div class="scanControls"><button class="btn ghost" id="back" ${scanStep===0?'disabled':''}>← НАЗАД</button><button class="btn primary" id="next">ДАЛЕЕ →</button></div>
-    <div class="micro">Quick Scan не рассчитывает денежный эффект без первичных данных компании.</div>
+    <div class="options">${opts.map((o,i)=>`<div class="option" data-i="${i}">${o}<small>выбрать</small></div>`).join('')}</div>
+    <div class="scanControls"><button class="btn ghost" id="back" ${scanStep===0?'disabled':''}>← Назад</button><button class="btn primary" id="next">Далее →</button></div>
+    <div class="micro">Результат показывает направления для проверки, а не заменяет полноценную диагностику.</div>
   </section>`;
   document.querySelectorAll('.option').forEach(el=>el.onclick=()=>{document.querySelectorAll('.option').forEach(x=>x.classList.remove('on'));el.classList.add('on')});
   document.getElementById('next').onclick=()=>{const e=document.querySelector('.option.on');if(!e)return alert('Выберите вариант');scanAnswers[scanStep]=+e.dataset.i;scanStep++;drawScan()};
   document.getElementById('back').onclick=()=>{if(scanStep>0){scanStep--;drawScan()}};
 }
 function scanResult(){
-  const points=scanAnswers.map((a,i)=>scanQuestions[i][2][a]);
-  const avg=points.reduce((a,b)=>a+b,0)/(points.length*3);
-  const score=Math.round(42+avg*39);
-  const vals=[
-    Math.min(90,48+points[3]*11),
-    Math.min(90,38+points[2]*13),
-    Math.min(90,43+points[5]*12),
-    Math.min(90,52+points[6]*9),
-    Math.min(90,39+points[4]*12),
-    Math.min(90,55+points[1]*8)
-  ];
-  app.innerHTML = `<section class="scanWrap" style="width:min(1080px,calc(100% - 40px))">
-    <div class="eyebrow">PRELIMINARY BX RESULT</div>
-    <div class="resultHero" style="margin-top:18px">
-      <div class="panel resultScore"><div class="eyebrow">BX SCORE</div><div class="score">${score}<small>/100</small></div>${status('DATA CONFIDENCE: LOW','amber')}
-        <div class="metricRows"><div class="metricRow"><span>Primary constraint</span><b>Cash conversion</b></div><div class="metricRow"><span>Secondary</span><b>Owner dependency</b></div><div class="metricRow"><span>Next step</span><b>Evidence collection</b></div></div>
+  const avg=scanAnswers.reduce((a,b)=>a+b,0)/(scanAnswers.length*3);
+  const overall=avg>0.72?['В целом устойчиво','good']:avg>0.45?['Требует внимания','warn']:['Есть заметные риски','bad'];
+  const cash=scanAnswers[2] <=1 ? ['Денежный поток','Деньги могут застревать внутри бизнеса','bad'] : ['Денежный поток','Существенных тревожных сигналов пока не видно','good'];
+  const owner=scanAnswers[4] <=1 ? ['Зависимость от собственника','Слишком много решений всё ещё проходят через владельца','warn'] : ['Зависимость от собственника','Управление выглядит достаточно распределённым','good'];
+  const sales=scanAnswers[5] <=1 ? ['Продажи','Нужно повысить прозрачность воронки и причин потерь','warn'] : ['Продажи','Картина выглядит достаточно прозрачной','good'];
+  app.innerHTML=`<section class="scanWrap" style="width:min(1050px,calc(100% - 40px))">
+    <div class="eyebrow">РЕЗУЛЬТАТ БЫСТРОЙ ДИАГНОСТИКИ</div>
+    <div class="resultSimple" style="margin-top:18px">
+      <div class="panel resultCard"><div class="eyebrow">ОБЩАЯ КАРТИНА</div><div class="resultState">${overall[0]}</div>${state(overall[0],overall[1])}
+        <p style="color:var(--muted);margin-top:18px">Это не оценка компании «по баллам». Это указатель, какие зоны стоит проверить глубже.</p>
       </div>
-      <div class="panel radar">${radarSVG(vals)}</div>
+      <div class="panel pathVisual"><div class="eyebrow">КУДА СМОТРЕТЬ ПЕРВЫМ</div>
+        <div class="priorityList">
+          ${[cash,owner,sales].map(x=>`<div class="priority"><i style="background:var(--${x[2]==='bad'?'bad':x[2]==='warn'?'warn':'good'})"></i><div><b>${x[0]}</b><div style="color:var(--muted)">${x[1]}</div></div></div>`).join('')}
+        </div>
+      </div>
     </div>
-    <div class="resultGrid" style="margin-top:12px">
-      <div class="panel resultMetric"><div class="eyebrow">CASH</div><strong class="redText">ATTENTION</strong><p class="muted">Нужно проверить CCC, DSO, запасы и cash conversion.</p></div>
-      <div class="panel resultMetric"><div class="eyebrow">COMMERCIAL</div><strong class="amberText">REVIEW</strong><p class="muted">Проверить pricing, discount leakage и sales productivity.</p></div>
-      <div class="panel resultMetric"><div class="eyebrow">MANAGEMENT</div><strong class="amberText">REVIEW</strong><p class="muted">Оценить owner dependency и качество decision system.</p></div>
-      <div class="panel resultMetric"><div class="eyebrow">FINANCIAL EFFECT</div><strong>NOT CALCULATED</strong><p class="muted">Без финансовых данных BX не имитирует точность.</p></div>
+    <div class="panel" style="padding:24px;margin-top:14px">
+      <div class="eyebrow">ЧТО ДАЛЬШЕ</div>
+      <div class="pathRow"><span>Собрать факты</span><b>→</b><span>Найти причину</span></div>
+      <div class="pathRow"><span>Сравнить решения</span><b>→</b><span>Проверить эффект</span></div>
     </div>
-    <div class="actions"><a class="btn primary" href="/sample-report">ПОСМОТРЕТЬ ПОЛНЫЙ X-RAY →</a><a class="btn ghost" href="/quick-scan">ПРОЙТИ СНОВА</a></div>
+    <div class="actions"><a class="btn primary" href="/sample-report">ПОСМОТРЕТЬ ПРИМЕР ПОЛНОЙ ДИАГНОСТИКИ →</a><a class="btn ghost" href="/quick-scan">ПРОЙТИ ЕЩЁ РАЗ</a></div>
   </section>`;
 }
 
 function report(){
-  app.innerHTML = pageHero('SAMPLE REPORT','Industrial Company · Demo X-Ray','Демонстрационная версия отчёта. Все цифры вымышлены и нужны только для показа структуры результата.') + `
+  app.innerHTML=pageHero('ПРИМЕР РЕЗУЛЬТАТА','Как выглядит итог без перегруза цифрами.','Демонстрационный пример показывает структуру: главная проблема, причина, решение и ожидаемый результат.')+`
   <section class="section"><div class="shell">
-    <div class="reportTop">
-      <div class="panel reportScore"><div class="scoreline"><div><div class="eyebrow">BX SCORE</div><div class="score">58<small>/100</small></div></div>${status('GO WITH CONDITIONS')}</div>
-        <div class="metricRows"><div class="metricRow"><span>Revenue</span><b>₽1.84B</b></div><div class="metricRow"><span>EBITDA</span><b>₽119M</b></div><div class="metricRow"><span>EBITDA margin</span><b>6.5%</b></div><div class="metricRow"><span>Data confidence</span><b>74%</b></div></div>
+    <div class="reportHero">
+      <div class="panel reportCard"><div class="eyebrow">ОБЩАЯ КАРТИНА</div><h2 style="font-size:36px;margin:10px 0 18px">Бизнес прибыльный, но денег становится меньше</h2>
+        <div class="summaryList">
+          <div class="summaryItem"><b>Главная причина</b><span>слишком много денег находится в запасах и неоплаченных счетах клиентов</span></div>
+          <div class="summaryItem"><b>Вторая проблема</b><span>скидки снижают прибыль сильнее, чем кажется по общей выручке</span></div>
+          <div class="summaryItem"><b>Ограничение</b><span>часть решений нельзя масштабировать без дополнительной проверки спроса</span></div>
+        </div>
       </div>
-      <div class="panel radar">${radarSVG([74,41,58,81,63,76])}</div>
+      <div class="panel reportCard"><div class="eyebrow">ПЕРВЫЕ ДЕЙСТВИЯ</div>
+        <div class="summaryList">
+          <div class="summaryItem"><b>1. Освободить деньги из запасов</b><span>пересмотреть нормативы закупки и медленно оборачиваемые позиции</span></div>
+          <div class="summaryItem"><b>2. Ограничить бесконтрольные скидки</b><span>ввести границы и проверку исключений</span></div>
+          <div class="summaryItem"><b>3. Проверить новую цену</b><span>не менять её сразу для всех клиентов, а провести ограниченный тест</span></div>
+        </div>
+      </div>
     </div>
-    <div class="panel" style="padding:24px;margin-top:14px;overflow:auto">
-      <div class="eyebrow">TOP FINDINGS</div>
-      <table class="reportTable"><thead><tr><th>Finding</th><th>Evidence</th><th>Potential</th><th>Investment</th><th>Decision</th></tr></thead><tbody>
-      <tr><td>Pricing architecture</td><td>High / 86%</td><td>₽24–31M EBITDA</td><td>₽2–4M</td><td>GO</td></tr>
-      <tr><td>Inventory policy</td><td>High / 91%</td><td>₽31–47M Cash</td><td>₽1–2M</td><td>PILOT</td></tr>
-      <tr><td>Sales productivity</td><td>Med / 72%</td><td>₽18–27M EBITDA</td><td>₽4–6M</td><td>GO WITH CONDITIONS</td></tr>
-      <tr><td>Low-performing SKU</td><td>Med / 68%</td><td>₽7–10M EBITDA</td><td>Minimal</td><td>PILOT</td></tr>
-      </tbody></table>
-    </div>
-    <div class="twoCol" style="margin-top:14px">
-      <div class="card"><div class="eyebrow">90-DAY PRIORITY</div><h3>Pricing + Inventory</h3><p>Два направления дают лучший баланс expected value / speed / execution risk.</p></div>
-      <div class="card"><div class="eyebrow">CONDITION</div><h3>Validate elasticity first</h3><p>Перед масштабированием pricing change провести контролируемый двухсегментный pilot.</p></div>
+    <div class="causeMap" style="margin-top:16px">
+      <div class="causeBox"><small>СЕЙЧАС</small><h3>Деньги застревают</h3><p>Рост требует всё больше оборотных средств.</p></div>
+      <div class="causeArrow">→</div>
+      <div class="causeBox"><small>90 ДНЕЙ</small><h3>Вернуть управляемость</h3><p>Запасы, условия оплаты, скидки и ответственность.</p></div>
+      <div class="causeArrow">→</div>
+      <div class="causeBox"><small>ЦЕЛЬ</small><h3>Рост без кассового напряжения</h3><p>Сначала устойчивость, затем ускорение.</p></div>
     </div>
   </div></section>`;
 }
 
 function portal(){
-  app.innerHTML = `<div class="portalShell">
-    <aside class="portalSide"><b>BX / OWNER PORTAL</b><a class="active">Overview</a><a>Value map</a><a>Findings</a><a>Board decisions</a><a>Initiatives</a><a>Risks</a><a>Documents</a><a href="/">← Public site</a></aside>
+  app.innerHTML=`<div class="portalShell">
+    <aside class="portalSide"><b>BX · КАБИНЕТ СОБСТВЕННИКА</b><a class="active">Обзор</a><a>Карта бизнеса</a><a>Главные выводы</a><a>Решения</a><a>Изменения</a><a>Риски</a><a>Документы</a><a href="/">← На сайт</a></aside>
     <main class="portalMain">
-      <div class="portalTop"><div><div class="eyebrow">INDUSTRIAL COMPANY · DEMO</div><h1>Owner Overview</h1></div>${status('LAST REVIEW · 08 OCT','green')}</div>
-      <div class="portalMetrics">
-        <div class="panel portalMetric"><span class="muted">BX Score</span><strong>68/100</strong><small class="greenText">+7 vs previous</small></div>
-        <div class="panel portalMetric"><span class="muted">Identified</span><strong>₽84M</strong><small>EBITDA opportunity</small></div>
-        <div class="panel portalMetric"><span class="muted">Realized</span><strong class="greenText">₽27M</strong><small>verified effect</small></div>
-        <div class="panel portalMetric"><span class="muted">Open decisions</span><strong>3</strong><small class="amberText">1 blocked</small></div>
-      </div>
-      <div class="healthGrid">
-        <div class="panel" style="padding:22px"><div class="eyebrow">BUSINESS HEALTH</div><div class="healthList" style="margin-top:22px">
-          ${[['Finance',74],['Commercial',58],['Operations',81],['Cash',49],['People',63],['Market',76]].map(x=>`<div class="healthRow"><span>${x[0]}</span><div class="bar"><i style="width:${x[1]}%"></i></div><b>${x[1]}</b></div>`).join('')}
+      <div class="portalTop"><div><div class="eyebrow">ДЕМОНСТРАЦИОННАЯ КОМПАНИЯ</div><h1>Что требует внимания сейчас</h1></div>${state('обновлено сегодня','good')}</div>
+      <div class="portalGrid">
+        <div class="panel portalCard"><div class="eyebrow">СОСТОЯНИЕ БИЗНЕСА</div><div class="healthList">
+          ${[
+            ['Финансы','устойчиво',78,'good'],
+            ['Продажи','внимание',58,'warn'],
+            ['Операции','устойчиво',82,'good'],
+            ['Денежный поток','риск',44,'bad'],
+            ['Команда','внимание',61,'warn'],
+            ['Рынок','устойчиво',74,'good']
+          ].map(x=>`<div class="healthRow"><span>${x[0]}</span><div class="bar"><i style="width:${x[2]}%;background:var(--${x[3]})"></i></div><b style="color:var(--${x[3]})">${x[1]}</b></div>`).join('')}
         </div></div>
-        <div class="panel" style="padding:22px"><div class="eyebrow">VALUE TRACKER</div><div class="metricRows">
-          <div class="metricRow"><span>Identified</span><b>₽84M</b></div><div class="metricRow"><span>Approved</span><b>₽63M</b></div><div class="metricRow"><span>Implementation</span><b>₽48M</b></div><div class="metricRow"><span>Realized</span><b class="greenText">₽27M</b></div>
-        </div><div class="progress" style="margin-top:18px"><i style="width:32%"></i></div></div>
+        <div class="panel portalCard"><div class="eyebrow">ТРИ РЕШЕНИЯ</div><div class="decisionList">
+          <div class="decisionItem"><b>Освободить деньги из запасов</b><span>В работе · ответственный: операционный директор</span></div>
+          <div class="decisionItem"><b>Проверить новые правила скидок</b><span>Проверка · результат через 14 дней</span></div>
+          <div class="decisionItem"><b>Передать часть решений команде</b><span>Подготовка · нужны границы полномочий</span></div>
+        </div></div>
       </div>
-      <div class="panel" style="padding:22px;margin-top:12px;overflow:auto"><div class="eyebrow">BENEFITS TRACKER</div><table class="initiativeTable"><thead><tr><th>Initiative</th><th>Baseline</th><th>Target</th><th>Potential</th><th>Realized</th><th>Owner</th></tr></thead><tbody>
-        <tr><td>Pricing</td><td>21% GM</td><td>24%</td><td>₽31M</td><td class="greenText">₽12M</td><td>CCO</td></tr>
-        <tr><td>Inventory</td><td>97 days</td><td>70</td><td>₽28M Cash</td><td class="greenText">₽9M</td><td>COO</td></tr>
-        <tr><td>Conversion</td><td>18%</td><td>23%</td><td>₽19M</td><td class="greenText">₽4M</td><td>Sales</td></tr>
-      </tbody></table></div>
+      <div class="portalGrid" style="margin-top:14px">
+        <div class="panel portalCard"><div class="eyebrow">ЧТО УЖЕ ИЗМЕНИЛОСЬ</div><div class="summaryList">
+          <div class="summaryItem"><b>Запасы начали сокращаться</b><span>появилась первая высвобождённая ликвидность</span></div>
+          <div class="summaryItem"><b>Скидки стали управляемее</b><span>исключения теперь требуют подтверждения</span></div>
+        </div></div>
+        <div class="panel portalCard"><div class="eyebrow">ЧТО БЛОКИРУЕТ РЕЗУЛЬТАТ</div><div class="summaryList">
+          <div class="summaryItem"><b>Не хватает данных по повторным продажам</b><span>без них нельзя уверенно менять ценовую модель</span></div>
+          <div class="summaryItem"><b>Часть инициатив не имеет одного ответственного</b><span>нужно закрепить владельцев решений</span></div>
+        </div></div>
+      </div>
     </main>
   </div>`;
 }
 
 function solution(slug){
   const names={
-    growth:['Growth','Рост, который увеличивает стоимость, а не только оборот.'],
-    profit:['Profit','Где именно теряется маржа и какие действия меняют EBITDA.'],
-    cash:['Cash','Working capital, CCC, DSO, inventory и cash conversion.'],
-    sales:['Sales','Pricing, conversion, productivity и экономика коммерческой функции.'],
-    operations:['Operations','Capacity, cost-to-serve, throughput и операционные ограничения.'],
-    turnaround:['Turnaround','Приоритет ликвидности, survival horizon и быстрые решения.'],
-    investment:['Investment','Expected value, downside, capital required и decision criteria.'],
-    execution:['BX 90','90-дневный execution sprint после X-Ray.'],
-    'operating-partner':['BX Operating Partner','Постоянная decision intelligence для собственника.']
+    growth:['Рост','Как расти так, чтобы вместе с выручкой росли деньги и устойчивость.'],
+    profit:['Прибыль','Где теряется прибыль и какие причины стоит устранять первыми.'],
+    cash:['Денежный поток','Почему деньги застревают внутри бизнеса и как их освободить.'],
+    sales:['Продажи','Где теряются сделки, маржа и производительность команды.'],
+    operations:['Операции','Какие процессы ограничивают рост и создают лишние расходы.'],
+    turnaround:['Выход из кризиса','Что делать сначала, когда главная задача — сохранить ликвидность и управляемость.'],
+    investment:['Инвестиционное решение','Стоит ли вкладывать деньги, какие есть альтернативы и что может пойти не так.'],
+    execution:['90 дней изменений','Как довести несколько ключевых решений до фактического результата.'],
+    'operating-partner':['Партнёр собственника','Постоянная помощь в сложных управленческих решениях.']
   };
-  const x=names[slug]||['BX Solution','Диагностика проблемы через экономику, риск и реализуемость.'];
-  app.innerHTML=pageHero('SOLUTION',x[0],x[1])+`<section class="section"><div class="shell"><div class="cards">
-    <div class="card"><div class="eyebrow">01</div><h3>Baseline</h3><p>Что происходит сейчас и чему можно доверять.</p></div>
-    <div class="card"><div class="eyebrow">02</div><h3>Economic impact</h3><p>Как проблема проходит через EBITDA, cash и enterprise value.</p></div>
-    <div class="card"><div class="eyebrow">03</div><h3>Decision</h3><p>Что делать первым, сколько это стоит и когда прекращать гипотезу.</p></div>
+  const x=names[slug]||['Решение BX','Разбираем проблему через причины, деньги, риски и реализуемость.'];
+  app.innerHTML=pageHero('РЕШЕНИЕ',x[0],x[1])+`<section class="section"><div class="shell"><div class="causeMap">
+    <div class="causeBox"><small>1</small><h3>Понять, что происходит</h3><p>Без предположений и лишних показателей.</p></div>
+    <div class="causeArrow">→</div>
+    <div class="causeBox"><small>2</small><h3>Найти настоящую причину</h3><p>Отделить симптом от источника проблемы.</p></div>
+    <div class="causeArrow">→</div>
+    <div class="causeBox"><small>3</small><h3>Выбрать действие</h3><p>С учётом эффекта, риска, сроков и ресурсов.</p></div>
   </div></div></section>`;
 }
 
-const routes = {
-  '/':home,'/xray':xray,'/board':board,'/cases':cases,'/intelligence':intelligence,
-  '/methodology':methodology,'/quick-scan':scan,'/sample-report':report,'/portal-demo':portal
-};
+const routes={'/':home,'/xray':xray,'/board':board,'/cases':cases,'/intelligence':intelligence,'/methodology':methodology,'/quick-scan':scan,'/sample-report':report,'/portal-demo':portal};
 if(routes[path]) routes[path]();
 else if(path.startsWith('/solutions/')) solution(path.split('/').pop());
-else app.innerHTML=pageHero('STAGING','Страница в разработке','Маршрут уже зарезервирован в архитектуре BX.');
+else app.innerHTML=pageHero('СТРАНИЦА В РАБОТЕ','Этот раздел уже заложен в структуру сайта.','Контент будет добавлен на следующем этапе.');
