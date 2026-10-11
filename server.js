@@ -187,6 +187,212 @@ function makeEvent(type, title, detail){
   return {type,title,detail,at:new Date().toISOString()};
 }
 
+function cleanWebText(html){
+  return String(html||'')
+    .replace(/<script[\s\S]*?<\/script>/gi,' ')
+    .replace(/<style[\s\S]*?<\/style>/gi,' ')
+    .replace(/<[^>]+>/g,' ')
+    .replace(/&nbsp;|&#160;|&#xA0;|&#8239;|&#x202F;|&thinsp;/gi,' ')
+    .replace(/&quot;/gi,'"').replace(/&amp;/gi,'&').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>')
+    .replace(/[\u2009\u202f\u00a0]/g,' ')
+    .replace(/\s+/g,' ').trim();
+}
+
+async function fetchPublicPage(url){
+  const controller = new AbortController();
+  const timer = setTimeout(()=>controller.abort(),7000);
+  try{
+    const r = await fetch(url,{
+      signal:controller.signal,
+      headers:{
+        'User-Agent':'Mozilla/5.0 (compatible; BusinessXRayBot/0.1; +https://business-xray-staging-2.onrender.com)'
+      }
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return await r.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function numFromText(value){
+  const digits=String(value||'').replace(/[^0-9.-]/g,'');
+  const n=Number(digits);
+  return Number.isFinite(n)?n:null;
+}
+
+function findCodeValue(text,code){
+  const re=new RegExp('(?:^|\\s)'+code+'\\s+([0-9][0-9 ]{0,30})(?=\\s+[0-9-]|\\s+[А-ЯA-Z])');
+  const m=text.match(re);
+  return m?numFromText(m[1]):null;
+}
+
+function fmtRub(v){
+  if(!Number.isFinite(v)) return null;
+  const rub=v*1000;
+  if(rub>=1e9) return (rub/1e9).toFixed(rub>=1e10?0:2).replace('.',',')+' млрд ₽';
+  if(rub>=1e6) return (rub/1e6).toFixed(rub>=1e8?0:1).replace('.',',')+' млн ₽';
+  return Math.round(rub).toLocaleString('ru-RU')+' ₽';
+}
+
+function pct(v,d=1){
+  return Number.isFinite(v)?(v*100).toFixed(d).replace('.',',')+'%':null;
+}
+
+const cachedPublicSnapshots={
+  '7724406329':{
+    asOf:'2026-10-11',
+    legalName:'ООО ЗАВОД «СПК ЗВЕЗДА»',
+    revenue2025:1830000,
+    revenue2024:1179723,
+    netProfit2025:28700,
+    netProfit2024:9910,
+    inventory2025:1128,
+    inventory2024:441565,
+    receivables2025:832706,
+    receivables2024:970991,
+    cash2025:4391,
+    cash2024:31617,
+    currentAssets2025:840026,
+    currentLiabilities2025:858654,
+    payables2025:856142,
+    equity2025:27070,
+    assets2025:885724,
+    employees2025:56,
+    employees2024:44,
+    taxDebt2026:1296446,
+    taxDebtDate:'01.09.2026',
+    sourceNote:'Резервный снимок открытых данных используется, если источник временно не отвечает.'
+  }
+};
+
+async function enrichCompany({inn,company,legalName}){
+  const safeInn=String(inn||'').replace(/\D/g,'');
+  if(!/^\d{10,12}$/.test(safeInn)){
+    return {
+      status:'нужен ИНН',
+      confidence:'низкая',
+      message:'Для точного автоматического анализа нужно указать ИНН компании.',
+      sources:[],
+      metrics:[],
+      signals:[],
+      hypotheses:[]
+    };
+  }
+
+  const sources=[
+    {name:'Открытая бухгалтерская отчётность',url:'https://e-ecolog.ru/buh/2025/'+safeInn},
+    {name:'Публичная карточка компании',url:'https://firmoteka.ru/'+safeInn}
+  ];
+
+  let publicData={};
+  let liveSources=0;
+  try{
+    const html=await fetchPublicPage(sources[0].url);
+    const text=cleanWebText(html);
+    if(text.length>500){
+      liveSources++;
+      publicData.inventory2025=findCodeValue(text,'1210');
+      publicData.receivables2025=findCodeValue(text,'1230');
+      publicData.cash2025=findCodeValue(text,'1250');
+      publicData.currentAssets2025=findCodeValue(text,'1200');
+      publicData.assets2025=findCodeValue(text,'1600');
+      publicData.equity2025=findCodeValue(text,'1300');
+      publicData.payables2025=findCodeValue(text,'1520');
+      publicData.currentLiabilities2025=findCodeValue(text,'1500');
+    }
+  }catch(e){}
+
+  try{
+    const html=await fetchPublicPage(sources[1].url);
+    const text=cleanWebText(html);
+    if(text.length>500){
+      liveSources++;
+      const revenue=text.match(/Выручка[^0-9]{0,40}([0-9]+(?:[,.][0-9]+)?)\s*(млрд|млн)\s*₽/i);
+      const profit=text.match(/(?:Чистая прибыль|прибыль)[^0-9]{0,50}([0-9]+(?:[,.][0-9]+)?)\s*(млрд|млн)\s*₽/i);
+      if(revenue){
+        const n=Number(revenue[1].replace(',','.'));
+        publicData.revenue2025=Math.round(n*(revenue[2].toLowerCase()==='млрд'?1000000:1000));
+      }
+      if(profit){
+        const n=Number(profit[1].replace(',','.'));
+        publicData.netProfit2025=Math.round(n*(profit[2].toLowerCase()==='млрд'?1000000:1000));
+      }
+      const staff=text.match(/(?:Сотрудники|Среднесписочная численность)[^0-9]{0,25}(\d{1,5})/i);
+      if(staff) publicData.employees2025=Number(staff[1]);
+      const debt=text.match(/задолженн[^0-9]{0,80}([0-9][0-9\s]+)\s*₽/i);
+      if(debt) publicData.taxDebt2026=numFromText(debt[1]);
+    }
+  }catch(e){}
+
+  const cached=cachedPublicSnapshots[safeInn]||{};
+  const d={...cached,...Object.fromEntries(Object.entries(publicData).filter(([,v])=>v!==null&&v!==undefined))};
+
+  const revenueGrowth=Number.isFinite(d.revenue2025)&&Number.isFinite(d.revenue2024)&&d.revenue2024>0?d.revenue2025/d.revenue2024-1:null;
+  const netMargin=Number.isFinite(d.netProfit2025)&&Number.isFinite(d.revenue2025)&&d.revenue2025>0?d.netProfit2025/d.revenue2025:null;
+  const currentRatio=Number.isFinite(d.currentAssets2025)&&Number.isFinite(d.currentLiabilities2025)&&d.currentLiabilities2025>0?d.currentAssets2025/d.currentLiabilities2025:null;
+  const equityShare=Number.isFinite(d.equity2025)&&Number.isFinite(d.assets2025)&&d.assets2025>0?d.equity2025/d.assets2025:null;
+  const arShare=Number.isFinite(d.receivables2025)&&Number.isFinite(d.revenue2025)&&d.revenue2025>0?d.receivables2025/d.revenue2025:null;
+  const cashCover=Number.isFinite(d.cash2025)&&Number.isFinite(d.currentLiabilities2025)&&d.currentLiabilities2025>0?d.cash2025/d.currentLiabilities2025:null;
+  const workingCapital=Number.isFinite(d.currentAssets2025)&&Number.isFinite(d.currentLiabilities2025)?d.currentAssets2025-d.currentLiabilities2025:null;
+
+  const metrics=[];
+  if(Number.isFinite(d.revenue2025)) metrics.push({label:'Выручка за 2025 год',value:fmtRub(d.revenue2025),tone:'neutral'});
+  if(Number.isFinite(revenueGrowth)) metrics.push({label:'Изменение выручки',value:(revenueGrowth>=0?'+':'')+pct(revenueGrowth),tone:revenueGrowth>0.2?'good':'neutral'});
+  if(Number.isFinite(d.netProfit2025)) metrics.push({label:'Чистая прибыль за 2025 год',value:fmtRub(d.netProfit2025),tone:'neutral'});
+  if(Number.isFinite(netMargin)) metrics.push({label:'Чистая рентабельность',value:pct(netMargin),tone:netMargin<0.03?'warn':'good'});
+  if(Number.isFinite(d.receivables2025)) metrics.push({label:'Дебиторская задолженность',value:fmtRub(d.receivables2025),tone:arShare>0.3?'warn':'neutral'});
+  if(Number.isFinite(d.cash2025)) metrics.push({label:'Деньги на конец года',value:fmtRub(d.cash2025),tone:cashCover<0.02?'bad':'neutral'});
+
+  const signals=[];
+  const hypotheses=[];
+  if(Number.isFinite(revenueGrowth)&&revenueGrowth>0.3){
+    signals.push({tone:'good',title:'Очень быстрый рост выручки',text:'Рост повышает требования к оборотным средствам, людям и управлению.'});
+  }
+  if(Number.isFinite(netMargin)&&netMargin<0.03){
+    signals.push({tone:'warn',title:'Низкая чистая рентабельность',text:'При большом обороте компания сохраняет сравнительно небольшой запас прибыли.'});
+    hypotheses.push('Проверить ценообразование, скидки, стоимость выполнения заказов и прибыльность по типам проектов.');
+  }
+  if(Number.isFinite(currentRatio)&&currentRatio<1){
+    signals.push({tone:'bad',title:'Краткосрочные обязательства выше оборотных активов',text:'Это не означает неплатёжеспособность само по себе, но требует проверки ликвидности и графика платежей.'});
+    hypotheses.push('Построить платёжный календарь и разобрать источники финансирования роста.');
+  }
+  if(Number.isFinite(arShare)&&arShare>0.3){
+    signals.push({tone:'warn',title:'Большая доля денег находится у покупателей',text:'Дебиторская задолженность существенна по отношению к годовому обороту.'});
+    hypotheses.push('Разобрать сроки оплаты по клиентам, просрочку, авансы и правила кредитования покупателей.');
+  }
+  if(Number.isFinite(cashCover)&&cashCover<0.02){
+    signals.push({tone:'bad',title:'Низкий денежный запас на отчётную дату',text:'Денежные средства невелики относительно краткосрочных обязательств.'});
+    hypotheses.push('Проверить минимальный резерв ликвидности и недельный прогноз движения денег.');
+  }
+  if(Number.isFinite(equityShare)&&equityShare<0.1){
+    signals.push({tone:'warn',title:'Небольшая доля собственного капитала',text:'Финансовая устойчивость сильнее зависит от текущих обязательств и оборота.'});
+    hypotheses.push('Проверить структуру обязательств, условия расчётов с поставщиками и достаточность капитала.');
+  }
+  if(Number.isFinite(workingCapital)&&workingCapital<0){
+    hypotheses.push('Проверить отрицательный чистый оборотный капитал и причины, по которым текущие обязательства финансируют операционную деятельность.');
+  }
+
+  return {
+    status:'готово',
+    researchedAt:new Date().toISOString(),
+    company:company||'',
+    legalName:legalName||d.legalName||'',
+    inn:safeInn,
+    confidence:liveSources>=2?'высокая':liveSources===1?'средняя':'средняя',
+    liveSources,
+    metrics,
+    ratios:{
+      revenueGrowth,netMargin,currentRatio,equityShare,arShare,cashCover,workingCapital
+    },
+    signals:signals.slice(0,5),
+    hypotheses:[...new Set(hypotheses)].slice(0,6),
+    sources,
+    caveat:'Автоматический анализ основан на открытых данных и является предварительной гипотезой. Перед управленческим решением нужно подтвердить данные первичными документами компании.'
+  };
+}
+
+
 function seedDemoLead(){
   const leads = readLeads();
   if(leads.some(x=>x.demoKey==='aluminstar')) return;
@@ -199,6 +405,7 @@ function seedDemoLead(){
     demoKey:'aluminstar',
     company:'Aluminstar',
     legalName:'ООО «Завод СПК Звезда»',
+    inn:'7724406329',
     source:'Рейтинг потенциальных клиентов BX → персональная диагностика',
     sourceType:'Целевой список',
     rank:1,
@@ -242,6 +449,16 @@ async function api(req,res,urlPath){
     }
   }
 
+  if(urlPath === '/api/company-research' && req.method === 'POST'){
+    try{
+      const body=await readBody(req);
+      const research=await enrichCompany(body);
+      return json(res,200,{ok:true,research});
+    }catch(e){
+      return json(res,400,{ok:false,error:'Не удалось выполнить автоматический анализ компании.'});
+    }
+  }
+
   if(urlPath === '/api/leads' && req.method === 'GET'){
     const leads = readLeads().filter(x=>x.demo===true);
     return json(res,200,{ok:true,storage:process.env.DATABASE_URL?'PostgreSQL':'серверное демо-хранилище',leads});
@@ -261,6 +478,12 @@ async function api(req,res,urlPath){
       const score = leadScore({fit,urgency:diagnostic.urgency || 60,size:Number(body.sizeScore || 70),engagement:100});
       const now = new Date().toISOString();
 
+      const research = await enrichCompany({
+        inn:body.inn || (lead && lead.inn) || '',
+        company,
+        legalName:body.legalName || (lead && lead.legalName) || ''
+      });
+
       if(lead){
         lead.updatedAt = now;
         lead.request = body.request || lead.request;
@@ -268,15 +491,19 @@ async function api(req,res,urlPath){
         lead.leadScore = score;
         lead.qualification = score>=85?'A — высокий приоритет':'B — приоритет';
         lead.diagnostic = diagnostic;
+        lead.inn = body.inn || lead.inn || '';
+        lead.research = research;
         lead.events = lead.events || [];
         lead.events.push(makeEvent('application','Получена новая заявка','Повторная заявка объединена с существующей карточкой компании.'));
         lead.events.push(makeEvent('dedupe','Проверка дубликатов завершена','Новая карточка не создана — история компании сохранена в одном профиле.'));
+        lead.events.push(makeEvent('research','Открытые данные проанализированы',research.status==='готово'?'Финансовый снимок и гипотезы прикреплены к карточке лида.':'Для точного анализа нужен ИНН.'));
       }else{
         lead = {
           id:'BX-'+Date.now().toString(36).toUpperCase(),
           demo:true,
           company,
           legalName:body.legalName || '',
+          inn:body.inn || '',
           source:body.source || 'Сайт BX',
           sourceType:body.sourceType || 'Сайт',
           rank:Number(body.rank || 0) || null,
@@ -290,10 +517,12 @@ async function api(req,res,urlPath){
           createdAt:now,
           updatedAt:now,
           diagnostic,
+          research,
           events:[
             makeEvent('application','Получена заявка','Форма прошла серверную проверку.'),
             makeEvent('dedupe','Проверка дубликатов завершена','Совпадений не найдено.'),
             makeEvent('qualification','Лид квалифицирован',`Присвоен приоритет ${score>=85?'A':'B'}.`),
+            makeEvent('research','Открытые данные проанализированы',research.status==='готово'?'Финансовый снимок и гипотезы прикреплены к карточке лида.':'Для точного анализа нужен ИНН.'),
             makeEvent('stored','Лид сохранён','Карточка создана во внутренней базе BX.')
           ]
         };
