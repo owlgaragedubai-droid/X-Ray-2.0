@@ -282,12 +282,56 @@ async function sourcePb(inn) {
       } catch(e) {}
     }
 
+    const lastField = (value, names=[]) => {
+      if (value == null) return null;
+      if (!Array.isArray(value)) return numberFrom(value);
+      for (let i=value.length-1;i>=0;i--) {
+        const item=value[i];
+        if (item==null) continue;
+        if (typeof item==='number' || typeof item==='string') {
+          const n=numberFrom(item); if(Number.isFinite(n)) return n;
+        }
+        if (typeof item==='object') {
+          for (const n of names) {
+            const v=numberFrom(item[n]);
+            if(Number.isFinite(v)) return v;
+          }
+          for (const v of Object.values(item)) {
+            const n=numberFrom(v);
+            if(Number.isFinite(n)) return n;
+          }
+        }
+      }
+      return null;
+    };
+    const boolFlag = v => v===true || v===1 || v==='1' || String(v||'').toLowerCase()==='true' || String(v||'').toLowerCase()==='да';
+    const rowInvalid = boolFlag(row.invalid);
     const data = {
-      legalName: cleanHtml(String(vyp['НаимЮЛПолн'] || row['НаимЮЛПолн'] || row.name || '')),
-      shortName: cleanHtml(String(vyp['НаимЮЛСокр'] || row['НаимЮЛСокр'] || '')),
+      legalName: cleanHtml(String(vyp['НаимЮЛПолн'] || row.namep || row['НаимЮЛПолн'] || row.name || '')),
+      shortName: cleanHtml(String(vyp['НаимЮЛСокр'] || row.namec || row['НаимЮЛСокр'] || '')),
       ogrn: cleanHtml(String(vyp['ОГРН'] || row.ogrn || row['ОГРН'] || '')),
-      registrationDate: cleanHtml(String(vyp['ДатаРег'] || vyp['ДатаОГРН'] || row.registrationDate || '')),
-      okved: cleanHtml(String((vyp['КодОКВЭД'] || '') + ' ' + (vyp['НаимОКВЭД'] || ''))).trim(),
+      kpp: cleanHtml(String(vyp['КПП'] || '')),
+      registrationDate: cleanHtml(String(vyp['ДатаРег'] || vyp['ДатаОГРН'] || row.dtogrn || row.registrationDate || '')),
+      statusText: cleanHtml(String(row.sulst_name_ex || vyp['sulst_name_ex'] || '')),
+      region: cleanHtml(String(row.regionname || '')),
+      address: cleanHtml(String(vyp['АдресРФ'] || '')),
+      okved: cleanHtml(String((vyp['КодОКВЭД'] || row.okved2main || '') + ' ' + (vyp['НаимОКВЭД'] || row.okved2mainname || ''))).trim(),
+      capital: numberFrom(vyp['СумКап']),
+      mspCategory: cleanHtml(String(vyp.rsmpcategory || row.rsmpcategory || '')),
+      mspDate: cleanHtml(String(vyp.rsmpdate || '')),
+      employees: lastField(vyp.sschr,['sschr','value','count','ЧислСотруд']),
+      employeesYear: cleanHtml(String(vyp.sschr_yearcode || '')),
+      taxArrears: numberFrom(vyp.totalarrearsum),
+      taxArrearsYear: cleanHtml(String(vyp.arrear_yearcode || '')),
+      taxPaid: numberFrom(vyp.taxpaysum),
+      taxPaidYear: cleanHtml(String(vyp.taxpay_yearcode || '')),
+      offenseSum: numberFrom(vyp.offensesum),
+      offenseYear: cleanHtml(String(vyp.offense_yearcode || '')),
+      debtSentToBailiff: boolFlag(vyp.pr_zd),
+      reportingProblem: boolFlag(vyp.pr_otch),
+      reportingStatusDate: cleanHtml(String(vyp.pr_otch_zd_date || '')),
+      hasUnreliableData: rowInvalid || boolFlag(vyp.invalid) || Array.isArray(vyp['СвНедАдресЮЛ']) && vyp['СвНедАдресЮЛ'].length>0,
+      taxModes: ['usn','ausn','eshn','envd','spr'].filter(k=>boolFlag(vyp[k])),
       tokenFound: !!row.token
     };
     return { source: sourceState('pb','ФНС — Прозрачный бизнес','https://pb.nalog.ru/','ok','Официальная карточка ФНС',Object.values(data).filter(Boolean).length), data };
@@ -454,7 +498,9 @@ function makeMetrics(d) {
   if (Number.isFinite(d.netMargin)) out.push({label:'Чистая рентабельность',value:percent(d.netMargin),tone:d.netMargin<0?'bad':d.netMargin<0.03?'warn':'good'});
   if (Number.isFinite(d.receivables)) out.push({label:'Дебиторская задолженность',value:formatRub(d.receivables),tone:'neutral'});
   if (Number.isFinite(d.cash)) out.push({label:'Деньги на отчётную дату',value:formatRub(d.cash),tone:'neutral'});
-  if (Number.isFinite(d.employees)) out.push({label:'Сотрудники',value:String(d.employees),tone:'neutral'});
+  if (Number.isFinite(d.employees)) out.push({label:'Сотрудники',value:String(d.employees)+(d.employeesYear?' · '+d.employeesYear:''),tone:'neutral'});
+  if (Number.isFinite(d.taxArrears)) out.push({label:'Налоговая задолженность',value:formatRub(d.taxArrears),tone:d.taxArrears>0?'warn':'good'});
+  if (Number.isFinite(d.taxPaid)) out.push({label:'Уплачено налогов',value:formatRub(d.taxPaid),tone:'neutral'});
   return out;
 }
 
@@ -493,6 +539,16 @@ function buildSignals(d) {
   if (Number.isFinite(d.relatedCount) && d.relatedCount > 0 && d.status === 'Недействующая') {
     signals.push({tone:'good',title:'Есть связанные лица и компании',text:'Открытый источник показывает связи; это полезно для поиска действующего преемника.'});
     hypotheses.push('Построить карту связанных действующих компаний и определить, куда перенеслась операционная деятельность.');
+  }
+  if (Number.isFinite(d.taxArrears) && d.taxArrears > 0) {
+    signals.push({tone:'warn',title:'ФНС публикует налоговую задолженность',text:'В карточке ФНС указана задолженность: '+formatRub(d.taxArrears)+(d.taxArrearsYear?' за период '+d.taxArrearsYear:'')+'.'});
+    hypotheses.push('Проверить актуальность налоговой задолженности и её влияние на ликвидность.');
+  }
+  if (d.debtSentToBailiff) {
+    signals.push({tone:'bad',title:'ФНС указывает долг, направленный приставам',text:'Этот признак требует проверки перед квалификацией компании как активного лида.'});
+  }
+  if (d.reportingProblem) {
+    signals.push({tone:'bad',title:'Есть риск по налоговой отчётности',text:'ФНС публикует признак проблемы с представлением налоговой отчётности.'});
   }
   if (!signals.length) {
     signals.push({tone:'neutral',title:'Критических публичных сигналов недостаточно',text:'Открытые данные собраны, но для содержательной диагностики нужны внутренние данные компании.'});
@@ -539,20 +595,35 @@ async function enrichCompany({inn}) {
     legalName:choose(e.legalName,pb.legalName,x.legalName,b.legalName,ec.legalName,f.legalName,o.legalName,p.legalName)||'',
     shortName:choose(e.shortName,pb.shortName,x.legalName,f.legalName)||'',
     ogrn:choose(e.ogrn,pb.ogrn,x.ogrn,o.ogrn)||'',
-    kpp:choose(e.kpp,x.kpp)||'',
-    status:choose(e.status,x.status,f.status,o.status)||'Не определён',
-    registrationDate:choose(e.registrationDate,x.registrationDate)||'',
+    kpp:choose(e.kpp,pb.kpp,x.kpp)||'',
+    status:choose(e.status,pb.statusText&&/прекращ|ликвид|исключ/i.test(pb.statusText)?'Недействующая':pb.statusText&&/действ/i.test(pb.statusText)?'Действующая':'',x.status,f.status,o.status)||'Не определён',
+    registrationDate:choose(e.registrationDate,pb.registrationDate,x.registrationDate)||'',
     liquidationDate:choose(e.liquidationDate,x.liquidationDate)||'',
     director:choose(e.director,x.director)||'',
-    address:choose(e.address,x.address)||'',
+    address:choose(e.address,pb.address,x.address)||'',
+    region:pb.region||'',
     okved:choose(pb.okved,b.okved,x.okved,o.okved,p.okved)||'',
+    capital:pb.capital,
+    mspCategory:pb.mspCategory||'',
+    mspDate:pb.mspDate||'',
+    taxArrears:pb.taxArrears,
+    taxArrearsYear:pb.taxArrearsYear||'',
+    taxPaid:pb.taxPaid,
+    taxPaidYear:pb.taxPaidYear||'',
+    offenseSum:pb.offenseSum,
+    offenseYear:pb.offenseYear||'',
+    debtSentToBailiff:!!pb.debtSentToBailiff,
+    reportingProblem:!!pb.reportingProblem,
+    reportingStatusDate:pb.reportingStatusDate||'',
+    taxModes:Array.isArray(pb.taxModes)?pb.taxModes:[],
     latestYear:choose(b.latestYear,ec.latestYear)||null,
     revenue,revenuePrev,netProfit,assets,currentAssets,currentLiabilities,equity,receivables,payables,inventory,cash,
-    employees:choose(x.employees,f.employees)||null,
+    employees:choose(pb.employees,x.employees,f.employees)||null,
+    employeesYear:pb.employeesYear||'',
     arbitrationCount:x.arbitrationCount,
     enforcementCount:x.enforcementCount,
     relatedCount:x.relatedCount,
-    hasUnreliableData:!!x.hasUnreliableData,
+    hasUnreliableData:!!pb.hasUnreliableData||!!x.hasUnreliableData,
     procurement:x.procurement||''
   };
 
@@ -582,8 +653,12 @@ async function enrichCompany({inn}) {
     sourceCoverage:{successful:ok,total:sources.length,officialSuccessful:official},
     profile:{
       status:d.status,ogrn:d.ogrn,kpp:d.kpp,registrationDate:d.registrationDate,liquidationDate:d.liquidationDate,
-      director:d.director,address:d.address,okved:d.okved,employees:d.employees,arbitrationCount:d.arbitrationCount,
-      enforcementCount:d.enforcementCount,relatedCount:d.relatedCount,hasUnreliableData:d.hasUnreliableData,procurement:d.procurement
+      director:d.director,address:d.address,region:d.region,okved:d.okved,capital:d.capital,mspCategory:d.mspCategory,mspDate:d.mspDate,
+      employees:d.employees,employeesYear:d.employeesYear,taxArrears:d.taxArrears,taxArrearsYear:d.taxArrearsYear,
+      taxPaid:d.taxPaid,taxPaidYear:d.taxPaidYear,offenseSum:d.offenseSum,offenseYear:d.offenseYear,
+      debtSentToBailiff:d.debtSentToBailiff,reportingProblem:d.reportingProblem,reportingStatusDate:d.reportingStatusDate,
+      taxModes:d.taxModes,arbitrationCount:d.arbitrationCount,enforcementCount:d.enforcementCount,relatedCount:d.relatedCount,
+      hasUnreliableData:d.hasUnreliableData,procurement:d.procurement
     },
     facts:{
       latestYear:d.latestYear,revenue:d.revenue,revenuePrev:d.revenuePrev,netProfit:d.netProfit,assets:d.assets,
