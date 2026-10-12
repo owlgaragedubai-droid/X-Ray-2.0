@@ -277,7 +277,7 @@ async function api(req,res,urlPath){
 
 initDb().then(async ()=>{
   try{
-    const test=await enrichCompany({inn:'7731316299'});
+    const test=await enrichCompany({inn:'7453354145'});
     console.log('BX source self-test:', JSON.stringify({
       inn:test.inn,
       company:test.company,
@@ -290,7 +290,7 @@ initDb().then(async ()=>{
       sources:(test.sources||[]).map(x=>({name:x.name,status:x.status,detail:x.detail,fields:x.fields}))
     }));
     const rows=await loadLeads();
-    const stored=rows.find(x=>String(x.inn||'')==='7731316299');
+    const stored=rows.find(x=>String(x.inn||'')==='7453354145');
     if(stored){
       stored.company=test.company||stored.company;
       stored.legalName=test.legalName||stored.legalName;
