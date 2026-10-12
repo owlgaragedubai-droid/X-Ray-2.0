@@ -135,7 +135,7 @@ async function sourceEgrul(inn) {
     const row = rows.find(x => String(x.i || '') === inn) || rows[0];
     if (!row) return { source: sourceState('egrul','ФНС — ЕГРЮЛ',url,'нет данных','Организация не найдена в ответе ФНС',0), data: {} };
 
-    const liquidationDate = row.lDate || row.ld || '';
+    const liquidationDate = row.e || row.lDate || row.ld || '';
     const legalName = row.n || row.c || '';
     const data = {
       legalName,
@@ -156,60 +156,144 @@ async function sourceEgrul(inn) {
 }
 
 async function sourceBo(inn) {
-  const root = 'https://bo.nalog.gov.ru/nbo/organizations';
+  const base = 'https://bo.nalog.gov.ru';
   try {
-    const search = await fetchJson(root + '/search?query=' + encodeURIComponent(inn), {
-      headers: { 'Accept':'application/json', 'Referer':'https://bo.nalog.gov.ru/' }
+    const searchUrl = base + '/advanced-search/organizations/search?query=' + encodeURIComponent(inn) + '&page=0&size=20';
+    const search = await fetchJson(searchUrl, {
+      timeout: 10000,
+      headers: { 'Accept':'application/json', 'Referer':base + '/' }
     });
-    const raw = search.data;
-    const items = Array.isArray(raw) ? raw : (raw && Array.isArray(raw.content) ? raw.content : (raw && Array.isArray(raw.items) ? raw.items : []));
-    const org = items.find(x => String(x.inn || '') === inn) || items[0];
-    if (!org || !org.id) return { source: sourceState('bo','ФНС — бухгалтерская отчётность','https://bo.nalog.gov.ru/','нет данных','Организация не найдена в БФО',0), data: {} };
+    const raw = search.data || {};
+    const items = Array.isArray(raw) ? raw : (Array.isArray(raw.content) ? raw.content : (Array.isArray(raw.items) ? raw.items : []));
+    const strip = v => cleanHtml(String(v || ''));
+    const org = items.find(x => strip(x.inn) === inn) || items[0];
+    if (!org || !org.id) {
+      return { source: sourceState('bo','ФНС — бухгалтерская отчётность',base + '/','нет данных','Организация не найдена в ГИР БО',0), data: {} };
+    }
 
-    const chartsResp = await fetchJson(root + '/' + org.id + '/charts', {
-      headers: { 'Accept':'application/json', 'Referer':'https://bo.nalog.gov.ru/' }
+    const bfoUrl = base + '/nbo/organizations/' + encodeURIComponent(org.id) + '/bfo/';
+    const detail = await fetchJson(bfoUrl, {
+      timeout: 10000,
+      headers: { 'Accept':'application/json', 'Referer':base + '/' }
     });
-    const charts = Array.isArray(chartsResp.data) ? chartsResp.data : ((chartsResp.data && chartsResp.data.content) || []);
-    const series = {};
-    for (const item of charts || []) {
-      const code = String(item.code || item.name || '');
-      const values = Array.isArray(item.values) ? item.values : [];
-      if (code && values.length) {
-        series[code] = values.map(v => ({
-          year: Number(v.year || v.period || 0) || null,
-          value: numberFrom(v.value)
-        })).filter(v => Number.isFinite(v.value));
+    const periods = Array.isArray(detail.data) ? detail.data : (Array.isArray(detail.data && detail.data.content) ? detail.data.content : []);
+    const sorted = [...periods].sort((a,b) => Number(b.period || 0) - Number(a.period || 0));
+    let chosen = null;
+    for (const period of sorted) {
+      const corrections = Array.isArray(period.typeCorrections) ? period.typeCorrections : [];
+      const annual = corrections.find(x => Number(x.type) === 12 && x.correction) || corrections.find(x => x.correction);
+      if (annual && annual.correction) {
+        chosen = { period, correction: annual.correction };
+        break;
       }
     }
-    const latest = code => {
-      const a = series[code] || [];
-      return a.length ? a[a.length - 1] : null;
+    if (!chosen) {
+      return { source: sourceState('bo','ФНС — бухгалтерская отчётность',bfoUrl,'нет данных','Карточка найдена, но годовая отчётность недоступна',0), data: {
+        legalName: strip(org.shortName || org.name || ''),
+        latestYear: numberFrom(org.bfo && org.bfo.period)
+      }};
+    }
+
+    const correction = chosen.correction || {};
+    const fr = correction.financialResult || {};
+    const bal = correction.balance || {};
+    const rub = v => {
+      const n = numberFrom(v);
+      return Number.isFinite(n) ? n * 1000 : null;
     };
-    const prev = code => {
-      const a = series[code] || [];
-      return a.length > 1 ? a[a.length - 2] : null;
-    };
-    const toRub = x => x && Number.isFinite(x.value) ? x.value * 1000 : null;
     const data = {
       boId: org.id,
-      legalName: org.name || org.fullName || '',
-      latestYear: (latest('2110') || latest('1600') || {}).year || null,
-      revenue: toRub(latest('2110')),
-      revenuePrev: toRub(prev('2110')),
-      netProfit: toRub(latest('2400')),
-      netProfitPrev: toRub(prev('2400')),
-      assets: toRub(latest('1600')),
-      currentAssets: toRub(latest('1200')),
-      equity: toRub(latest('1300')),
-      currentLiabilities: toRub(latest('1500')),
-      payables: toRub(latest('1520')),
-      receivables: toRub(latest('1230')),
-      inventory: toRub(latest('1210')),
-      cash: toRub(latest('1250'))
+      legalName: strip(org.shortName || org.name || ''),
+      latestYear: Number(chosen.period.period || (org.bfo && org.bfo.period) || 0) || null,
+      revenue: rub(fr.current2110),
+      revenuePrev: rub(fr.previous2110),
+      netProfit: rub(fr.current2400),
+      netProfitPrev: rub(fr.previous2400),
+      assets: rub(bal.current1600),
+      currentAssets: rub(bal.current1200),
+      equity: rub(bal.current1300),
+      currentLiabilities: rub(bal.current1500),
+      payables: rub(bal.current1520),
+      receivables: rub(bal.current1230),
+      inventory: rub(bal.current1210),
+      cash: rub(bal.current1250),
+      okved: strip(org.okved2 || ''),
+      statusCode: strip(org.statusCode || ''),
+      statusDate: strip(org.statusDate || '')
     };
-    return { source: sourceState('bo','ФНС — бухгалтерская отчётность','https://bo.nalog.gov.ru/','ok','Официальный ресурс бухгалтерской отчётности ФНС',Object.values(data).filter(v => v !== null && v !== '').length), data };
+    return { source: sourceState('bo','ФНС — бухгалтерская отчётность',base + '/','ok','Официальная годовая отчётность ФНС за ' + (data.latestYear || 'последний доступный') + ' год',Object.values(data).filter(v => v !== null && v !== '').length), data };
   } catch (e) {
     return { source: sourceState('bo','ФНС — бухгалтерская отчётность','https://bo.nalog.gov.ru/','ошибка',e.message,0), data: {} };
+  }
+}
+
+async function sourcePb(inn) {
+  const searchUrl = 'https://pb.nalog.ru/search-proc.json';
+  const companyUrl = 'https://pb.nalog.ru/company-proc.json';
+  const formHeaders = {
+    'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8',
+    'X-Requested-With':'XMLHttpRequest',
+    'Referer':'https://pb.nalog.ru/'
+  };
+  const postForm = async (url, obj) => {
+    const body = new URLSearchParams(obj);
+    const r = await fetchText(url,{method:'POST',headers:formHeaders,body,timeout:10000});
+    return JSON.parse(r.text);
+  };
+  try {
+    let result = await postForm(searchUrl,{mode:'search-ul',queryUl:inn,page:'1',pageSize:'10'});
+    if (result && result.captchaRequired) {
+      return { source: sourceState('pb','ФНС — Прозрачный бизнес','https://pb.nalog.ru/','ограничен','ФНС запросила CAPTCHA',0), data:{} };
+    }
+    if (result && result.id && !(result.ul && result.ul.data)) {
+      for (let i=0;i<6;i++) {
+        await sleep(350+i*250);
+        const polled = await postForm(searchUrl,{id:String(result.id),method:'get-response'});
+        if (polled && polled.captchaRequired) {
+          return { source: sourceState('pb','ФНС — Прозрачный бизнес','https://pb.nalog.ru/','ограничен','ФНС запросила CAPTCHA',0), data:{} };
+        }
+        if (polled && polled.ul && Array.isArray(polled.ul.data)) { result=polled; break; }
+      }
+    }
+    const rows = result && result.ul && Array.isArray(result.ul.data) ? result.ul.data : [];
+    const row = rows.find(x => cleanHtml(String(x.inn || x.ИНН || '')) === inn) || rows[0];
+    if (!row) {
+      return { source: sourceState('pb','ФНС — Прозрачный бизнес','https://pb.nalog.ru/','нет данных','Компания не найдена в ответе сервиса',0), data:{} };
+    }
+
+    let vyp = {};
+    if (row.token) {
+      try {
+        let req = await postForm(companyUrl,{token:String(row.token),method:'get-request'});
+        if (req && req.captchaRequired) {
+          return { source: sourceState('pb','ФНС — Прозрачный бизнес','https://pb.nalog.ru/','ограничен','ФНС запросила CAPTCHA при открытии карточки',0), data:{
+            legalName: cleanHtml(String(row.name || row.naim || row.НаимЮЛПолн || ''))
+          }};
+        }
+        if (req && req.id) {
+          for (let i=0;i<6;i++) {
+            await sleep(350+i*250);
+            const polled = await postForm(companyUrl,{token:String(row.token),id:String(req.id),method:'get-response'});
+            if (polled && polled.vyp) { vyp=polled.vyp; break; }
+          }
+        } else if (req && req.vyp) {
+          vyp=req.vyp;
+        }
+      } catch(e) {}
+    }
+
+    const data = {
+      legalName: cleanHtml(String(vyp['НаимЮЛПолн'] || row['НаимЮЛПолн'] || row.name || '')),
+      shortName: cleanHtml(String(vyp['НаимЮЛСокр'] || row['НаимЮЛСокр'] || '')),
+      ogrn: cleanHtml(String(vyp['ОГРН'] || row.ogrn || row['ОГРН'] || '')),
+      registrationDate: cleanHtml(String(vyp['ДатаРег'] || vyp['ДатаОГРН'] || row.registrationDate || '')),
+      okved: cleanHtml(String((vyp['КодОКВЭД'] || '') + ' ' + (vyp['НаимОКВЭД'] || ''))).trim(),
+      tokenFound: !!row.token
+    };
+    return { source: sourceState('pb','ФНС — Прозрачный бизнес','https://pb.nalog.ru/','ok','Официальная карточка ФНС',Object.values(data).filter(Boolean).length), data };
+  } catch (e) {
+    const detail = /403|451|captcha/i.test(e.message) ? 'Доступ ограничен для текущего сервера: ' + e.message : e.message;
+    return { source: sourceState('pb','ФНС — Прозрачный бизнес','https://pb.nalog.ru/','ошибка',detail,0), data:{} };
   }
 }
 
@@ -426,6 +510,7 @@ async function enrichCompany({inn}) {
   const results = await Promise.all([
     sourceEgrul(safeInn),
     sourceBo(safeInn),
+    sourcePb(safeInn),
     sourceEecolog(safeInn),
     sourceXfirm(safeInn),
     sourceFirmoteka(safeInn),
@@ -435,7 +520,7 @@ async function enrichCompany({inn}) {
 
   const map = Object.fromEntries(results.map(x => [x.source.key, x.data || {}]));
   const sources = results.map(x => x.source);
-  const e = map.egrul || {}, b = map.bo || {}, ec = map.eecolog || {}, x = map.xfirm || {}, f = map.firmoteka || {}, o = map.openweb || {}, p = map.procurement || {};
+  const e = map.egrul || {}, b = map.bo || {}, pb = map.pb || {}, ec = map.eecolog || {}, x = map.xfirm || {}, f = map.firmoteka || {}, o = map.openweb || {}, p = map.procurement || {};
 
   const revenue = choose(b.revenue,ec.revenue,x.revenue,f.revenue);
   const revenuePrev = choose(b.revenuePrev,null);
@@ -451,16 +536,16 @@ async function enrichCompany({inn}) {
 
   const d = {
     inn:safeInn,
-    legalName:choose(e.legalName,x.legalName,b.legalName,ec.legalName,f.legalName,o.legalName,p.legalName)||'',
-    shortName:choose(e.shortName,x.legalName,f.legalName)||'',
-    ogrn:choose(e.ogrn,x.ogrn,o.ogrn)||'',
+    legalName:choose(e.legalName,pb.legalName,x.legalName,b.legalName,ec.legalName,f.legalName,o.legalName,p.legalName)||'',
+    shortName:choose(e.shortName,pb.shortName,x.legalName,f.legalName)||'',
+    ogrn:choose(e.ogrn,pb.ogrn,x.ogrn,o.ogrn)||'',
     kpp:choose(e.kpp,x.kpp)||'',
     status:choose(e.status,x.status,f.status,o.status)||'Не определён',
     registrationDate:choose(e.registrationDate,x.registrationDate)||'',
     liquidationDate:choose(e.liquidationDate,x.liquidationDate)||'',
     director:choose(e.director,x.director)||'',
     address:choose(e.address,x.address)||'',
-    okved:choose(x.okved,o.okved,p.okved)||'',
+    okved:choose(pb.okved,b.okved,x.okved,o.okved,p.okved)||'',
     latestYear:choose(b.latestYear,ec.latestYear)||null,
     revenue,revenuePrev,netProfit,assets,currentAssets,currentLiabilities,equity,receivables,payables,inventory,cash,
     employees:choose(x.employees,f.employees)||null,
@@ -479,7 +564,7 @@ async function enrichCompany({inn}) {
 
   const {signals,hypotheses} = buildSignals(d);
   const ok = sources.filter(s => s.status === 'ok').length;
-  const official = sources.filter(s => ['egrul','bo'].includes(s.key) && s.status === 'ok').length;
+  const official = sources.filter(s => ['egrul','bo','pb'].includes(s.key) && s.status === 'ok').length;
   const confidence = official >= 2 ? 'высокая' : official >= 1 && ok >= 2 ? 'выше средней' : ok >= 2 ? 'средняя' : 'низкая';
 
   let leadRecommendation = 'Требует ручной квалификации';
