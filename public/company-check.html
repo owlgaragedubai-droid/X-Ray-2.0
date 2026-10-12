@@ -6,38 +6,34 @@
 <title>BX — проверка компании по ИНН</title>
 <link rel="stylesheet" href="/styles.css">
 <style>
-.checkShell{width:min(1050px,calc(100% - 40px));margin:auto;padding:70px 0 100px}
-.checkHero{max-width:800px}.checkHero h1{font-size:clamp(46px,6vw,74px);line-height:.98;letter-spacing:-.055em;margin:12px 0 20px}
-.checkHero p{font-size:19px;color:var(--muted);max-width:720px}
-.searchBox{margin-top:32px;padding:24px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
-.searchBox label{display:grid;gap:8px;font-weight:800}.searchBox input{width:100%;padding:16px;border:1px solid #cfdcda;border-radius:13px;font-size:19px;letter-spacing:.04em;background:white}
-.searchHint{grid-column:1/-1;color:var(--muted);font-size:12px}
+.checkShell{width:min(1120px,calc(100% - 40px));margin:auto;padding:64px 0 100px}
+.checkHero{max-width:850px}.checkHero h1{font-size:clamp(44px,6vw,72px);line-height:.98;letter-spacing:-.055em;margin:12px 0 20px}.checkHero p{font-size:19px;color:var(--muted)}
+.searchBox{margin-top:30px;padding:24px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}.searchBox label{display:grid;gap:8px;font-weight:800}.searchBox input{width:100%;padding:16px;border:1px solid #cfdcda;border-radius:13px;font-size:19px;letter-spacing:.04em;background:white}.searchHint{grid-column:1/-1;color:var(--muted);font-size:12px}
 .loadingBox{margin-top:16px;padding:34px;text-align:center}.spin{width:34px;height:34px;border:3px solid #dce8e5;border-top-color:var(--accent);border-radius:50%;margin:auto;animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
-.companyHead{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:20px}.companyHead h2{font-size:36px;letter-spacing:-.04em;margin:6px 0}.companyHead p{color:var(--muted);margin:0}
-.badge{display:inline-flex;padding:7px 10px;border-radius:999px;background:#eaf5f3;border:1px solid #cfe7e2;color:var(--accent);font-size:11px;font-weight:850}
-.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.metric{padding:16px;border:1px solid var(--line);border-radius:14px;background:#f9fbfa}.metric span{display:block;color:var(--muted);font-size:12px;margin-bottom:5px}.metric b{font-size:20px}
+.companyHead{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:18px}.companyHead h2{font-size:36px;letter-spacing:-.04em;margin:6px 0}.companyHead p{color:var(--muted);margin:0}.badges{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.badge{display:inline-flex;padding:7px 10px;border-radius:999px;background:#eaf5f3;border:1px solid #cfe7e2;color:var(--accent);font-size:11px;font-weight:850}.badge.bad{background:#fff0ed;border-color:#f0d3cf;color:var(--bad)}.badge.warn{background:#fff8eb;border-color:#eadfbf;color:var(--warn)}
+.profile{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:14px}.profileItem{padding:13px;border:1px solid var(--line);border-radius:12px;background:#fbfcfc}.profileItem span{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}.profileItem b{font-size:13px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.metric{padding:16px;border:1px solid var(--line);border-radius:14px;background:#f9fbfa}.metric span{display:block;color:var(--muted);font-size:12px;margin-bottom:5px}.metric b{font-size:19px}
+.recommend{margin-top:14px;padding:18px;border-radius:14px;background:linear-gradient(135deg,#eaf4f2,#fff);border:1px solid #d5e5e1}.recommend strong{display:block;font-size:18px;margin-top:4px}
 .analysisGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}.signalList,.ideaList{display:grid;gap:10px;margin-top:12px}.signal{padding:15px;border:1px solid var(--line);border-left:4px solid var(--unknown);border-radius:13px;background:#fbfcfc}.signal.good{border-left-color:var(--good)}.signal.warn{border-left-color:var(--warn)}.signal.bad{border-left-color:var(--bad)}.signal b{display:block;margin-bottom:4px}.signal span{color:var(--muted);font-size:13px}.idea{padding:13px 14px;border-radius:12px;background:#f7faf9;border:1px solid var(--line)}
-.saveRow{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}.saveRow p{color:var(--muted);margin:0;max-width:630px}
-.notice{margin-top:14px;padding:14px 16px;border-radius:13px;background:#f7faf9;border:1px solid var(--line);color:var(--muted)}
+.sourcesPanel{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}.sourceRows{display:grid;gap:8px;margin-top:10px}.sourceRow{display:grid;grid-template-columns:210px 100px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#fbfcfc}.sourceRow b{font-size:13px}.sourceRow span{font-size:12px;color:var(--muted)}.sourceStatus{font-weight:850}.sourceStatus.ok{color:var(--good)}.sourceStatus.error{color:var(--bad)}.sourceStatus.limited{color:var(--warn)}.sourceRow a{font-size:12px;color:var(--accent);font-weight:750}
+.saveRow{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}.saveRow p{color:var(--muted);margin:0;max-width:650px}.notice{margin-top:14px;padding:14px 16px;border-radius:13px;background:#f7faf9;border:1px solid var(--line);color:var(--muted)}.err{padding:18px;margin-top:16px;border:1px solid #f0d3cf;background:#fff7f5;border-radius:14px;color:#98483e}
 .saved{padding:28px;margin-top:16px;background:linear-gradient(135deg,#edf8f4,#fff)}.saved h2{font-size:32px;margin:8px 0}.savedGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}.savedGrid div{padding:13px;border:1px solid var(--line);border-radius:12px;background:white}.savedGrid span{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
-.err{padding:18px;margin-top:16px;border:1px solid #f0d3cf;background:#fff7f5;border-radius:14px;color:#98483e}
-.sources{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;font-size:12px}.sources a{color:var(--accent);font-weight:750}
-@media(max-width:760px){.searchBox{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}.analysisGrid{grid-template-columns:1fr}.companyHead,.saveRow{display:block}.saveRow .btn{margin-top:14px}.savedGrid{grid-template-columns:1fr}}
-@media(max-width:500px){.metrics{grid-template-columns:1fr}}
+@media(max-width:900px){.profile,.metrics{grid-template-columns:1fr 1fr}.sourceRow{grid-template-columns:1fr 90px}.sourceRow span:nth-child(3){grid-column:1/-1}.analysisGrid{grid-template-columns:1fr}}
+@media(max-width:700px){.searchBox{grid-template-columns:1fr}.companyHead,.saveRow{display:block}.badges{justify-content:flex-start;margin-top:12px}.saveRow .btn{margin-top:14px}.profile,.metrics,.savedGrid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <header class="nav"><div class="shell navin"><a class="brand" href="/">BX<small>ДИАГНОСТИКА БИЗНЕСА</small></a><nav class="menu"><a href="/company-check.html">Проверить компанию</a><a href="/leads.html">База лидов</a><a href="/quick-scan">Диагностика</a></nav><a class="btn ghost" href="/">На сайт</a></div></header>
 <main class="checkShell">
   <div class="checkHero">
-    <div class="eyebrow">ТЕСТ АВТОАНАЛИЗА</div>
-    <h1>Введите ИНН любой компании.</h1>
-    <p>BX попробует определить компанию, собрать открытые финансовые данные, выделить сигналы и предложить вопросы для первой встречи.</p>
+    <div class="eyebrow">АВТОАНАЛИЗ КОМПАНИИ</div>
+    <h1>Введите ИНН. BX сам соберёт открытую картину.</h1>
+    <p>Проверяем официальный ЕГРЮЛ и бухгалтерскую отчётность ФНС, затем дополняем картину несколькими открытыми реестрами. Если один источник не отвечает, система продолжает поиск.</p>
   </div>
   <div class="panel searchBox">
-    <label>ИНН компании<input id="inn" inputmode="numeric" maxlength="12" placeholder="Например, 7707083893"></label>
+    <label>ИНН компании<input id="inn" inputmode="numeric" maxlength="12" placeholder="Например, 7731316299"></label>
     <button class="btn primary" id="analyze">ПРОАНАЛИЗИРОВАТЬ →</button>
-    <div class="searchHint">ИНН проверяется по контрольной сумме. Используйте реальный ИНН российского юридического лица или ИП.</div>
+    <div class="searchHint">Показываем не только результат, но и протокол источников — что ответило, что не нашло данные и где возникло ограничение.</div>
   </div>
   <div id="out"></div>
 </main>
@@ -52,75 +48,66 @@ function validInn(v){
  if(inn.length===12){const a=[7,2,4,10,3,5,9,4,6,8],b=[3,7,2,4,10,3,5,9,4,6,8];return a.reduce((s,w,i)=>s+w*+inn[i],0)%11%10===+inn[10]&&b.reduce((s,w,i)=>s+w*+inn[i],0)%11%10===+inn[11]}
  return false;
 }
-async function json(url,opts){
+async function call(url,opts){
  const r=await fetch(url,opts); const j=await r.json(); if(!r.ok||!j.ok) throw new Error(j.error||'Ошибка'); return j;
 }
-async function identify(inn){
- try{
-   const r=await fetch('https://www.rsnmo.ru/api/v1/company?inn='+encodeURIComponent(inn),{headers:{'Accept':'application/json'}});
-   if(!r.ok) return null;
-   const j=await r.json();
-   const d=j.data||j;
-   if(d.found===false) return null;
-   const company=d.company||d.organization||d;
-   return {
-     name:company.short_name||company.shortName||company.name_short||company.name||company.full_name||company.fullName||'',
-     legalName:company.full_name||company.fullName||company.name||''
-   };
- }catch(e){ return null; }
-}
-function renderResearch(research,identity,inn){
- const name=(identity&&identity.name)||research.company||research.legalName||('Компания по ИНН '+inn);
- const legal=(identity&&identity.legalName)||research.legalName||'';
- current={inn,name,legal,research};
- const metrics=(research.metrics||[]);
- const signals=(research.signals||[]);
- const ideas=(research.hypotheses||[]);
+function statusClass(s){return s==='ok'?'ok':s==='ограничен'?'limited':s==='ошибка'?'error':''}
+function sourceLabel(s){return s==='ok'?'ДАННЫЕ ЕСТЬ':s==='ограничен'?'ОГРАНИЧЕН':s==='ошибка'?'ОШИБКА':'НЕТ ДАННЫХ'}
+function row(label,value){return value?'<div class="profileItem"><span>'+esc(label)+'</span><b>'+esc(value)+'</b></div>':''}
+function render(research){
+ const p=research.profile||{};
+ const metrics=research.metrics||[];
+ const signals=research.signals||[];
+ const ideas=research.hypotheses||[];
+ const sources=research.sources||[];
+ const statusTone=p.status==='Недействующая'?'bad':p.status==='Действующая'?'':'warn';
+ current={inn:research.inn,name:research.company||research.legalName||('Компания '+research.inn),legal:research.legalName||'',research};
  $('out').innerHTML=`<section class="panel" style="padding:28px;margin-top:16px">
-   <div class="companyHead"><div><div class="eyebrow">ПРЕДВАРИТЕЛЬНЫЙ АНАЛИЗ</div><h2>${esc(name)}</h2><p>${legal?esc(legal)+' · ':''}ИНН ${esc(inn)}</p></div><span class="badge">уверенность: ${esc(research.confidence||'ограниченная')}</span></div>
-   ${metrics.length?`<div class="metrics">${metrics.map(m=>`<div class="metric"><span>${esc(m.label)}</span><b>${esc(m.value)}</b></div>`).join('')}</div>`:`<div class="notice">Полных финансовых показателей в подключённых источниках не найдено. Компанию всё равно можно сохранить в базу и доисследовать отдельно.</div>`}
-   <div class="analysisGrid">
-     <div><div class="eyebrow">ЧТО ВИДИТ СИСТЕМА</div><div class="signalList">${signals.length?signals.map(x=>`<div class="signal ${esc(x.tone)}"><b>${esc(x.title)}</b><span>${esc(x.text)}</span></div>`).join(''):'<div class="notice">Недостаточно данных для уверенных автоматических сигналов.</div>'}</div></div>
-     <div><div class="eyebrow">ВОПРОСЫ ДЛЯ ПЕРВОЙ ВСТРЕЧИ</div><div class="ideaList">${ideas.length?ideas.map((x,i)=>`<div class="idea"><b>${i+1}.</b> ${esc(x)}</div>`).join(''):'<div class="notice">Сначала нужно запросить управленческие данные компании.</div>'}</div></div>
+   <div class="companyHead">
+     <div><div class="eyebrow">РЕЗУЛЬТАТ АВТОАНАЛИЗА</div><h2>${esc(current.name)}</h2><p>${current.legal&&current.legal!==current.name?esc(current.legal)+' · ':''}ИНН ${esc(current.inn)}</p></div>
+     <div class="badges"><span class="badge ${statusTone}">${esc(p.status||'Статус не определён')}</span><span class="badge">уверенность: ${esc(research.confidence||'низкая')}</span><span class="badge">${esc((research.sourceCoverage?.successful||0)+' из '+(research.sourceCoverage?.total||0)+' источников')}</span></div>
    </div>
-   <div class="sources">${(research.sources||[]).map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)} ↗</a>`).join('')}</div>
-   <div class="saveRow"><p>Сохранить эту компанию как новый лид вместе с ИНН, результатом интернет-анализа и историей первого касания.</p><button class="btn primary" id="saveLead">СОХРАНИТЬ В БАЗУ →</button></div>
-   <div class="notice">Это предварительная оценка по открытым данным, а не аудиторское заключение. Для управленческих выводов данные нужно подтвердить документами компании.</div>
+   <div class="profile">
+     ${row('ОГРН',p.ogrn)}${row('КПП',p.kpp)}${row('Регистрация',p.registrationDate)}${row('Прекращение',p.liquidationDate)}
+     ${row('Руководитель',p.director)}${row('Сотрудники',p.employees)}${row('Арбитражные дела',p.arbitrationCount)}${row('Исполнительные производства',p.enforcementCount)}
+   </div>
+   ${p.address?'<div class="notice"><b>Адрес:</b> '+esc(p.address)+'</div>':''}
+   ${p.okved?'<div class="notice"><b>Основная деятельность:</b> '+esc(p.okved)+'</div>':''}
+   ${metrics.length?'<div class="metrics" style="margin-top:14px">'+metrics.map(m=>'<div class="metric"><span>'+esc(m.label)+'</span><b>'+esc(m.value)+'</b></div>').join('')+'</div>':'<div class="notice">Числовая финансовая отчётность в ответивших источниках не найдена.</div>'}
+   <div class="recommend"><div class="eyebrow">КВАЛИФИКАЦИЯ BX</div><strong>${esc(research.leadRecommendation||'Требует ручной проверки')}</strong></div>
+   <div class="analysisGrid">
+     <div><div class="eyebrow">ЧТО ВИДИТ СИСТЕМА</div><div class="signalList">${signals.map(x=>'<div class="signal '+esc(x.tone)+'"><b>'+esc(x.title)+'</b><span>'+esc(x.text)+'</span></div>').join('')}</div></div>
+     <div><div class="eyebrow">ЧТО ПРОВЕРЯТЬ ДАЛЬШЕ</div><div class="ideaList">${ideas.map((x,i)=>'<div class="idea"><b>'+(i+1)+'.</b> '+esc(x)+'</div>').join('')}</div></div>
+   </div>
+   <div class="sourcesPanel"><div class="eyebrow">ПРОТОКОЛ ИСТОЧНИКОВ</div><div class="sourceRows">
+     ${sources.map(s=>'<div class="sourceRow"><b>'+esc(s.name)+'</b><div class="sourceStatus '+statusClass(s.status)+'">'+sourceLabel(s.status)+'</div><span>'+esc(s.detail||'')+'</span><a href="'+esc(s.url)+'" target="_blank" rel="noopener">Открыть ↗</a></div>').join('')}
+   </div></div>
+   <div class="saveRow"><p>Сохранить компанию в базу вместе с этим снимком, статусом источников и гипотезами.</p><button class="btn primary" id="saveLead">СОХРАНИТЬ В БАЗУ →</button></div>
+   <div class="notice">${esc(research.caveat||'Это предварительная оценка по открытым данным.')}</div>
  </section>`;
  $('saveLead').onclick=saveLead;
 }
 async function analyze(){
  const inn=$('inn').value.replace(/\D/g,'');
- if(!validInn(inn)){ $('out').innerHTML='<div class="err">ИНН не прошёл проверку. Проверьте цифры.</div>'; return; }
+ if(!validInn(inn)){ $('out').innerHTML='<div class="err">ИНН не прошёл проверку контрольной суммы.</div>'; return; }
  $('analyze').disabled=true;
- $('out').innerHTML='<div class="panel loadingBox"><div class="spin"></div><h3>Ищем компанию и анализируем открытые данные</h3><p class="muted">Это может занять несколько секунд.</p></div>';
+ $('out').innerHTML='<div class="panel loadingBox"><div class="spin"></div><h3>Проверяем ФНС и открытые реестры</h3><p>Система перебирает несколько источников и последние отчётные годы.</p></div>';
  try{
-   const [identity,researchRes]=await Promise.all([
-     identify(inn),
-     json('/api/company-research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({inn})})
-   ]);
-   renderResearch(researchRes.research,identity,inn);
+   const j=await call('/api/company-research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({inn})});
+   render(j.research);
  }catch(e){ $('out').innerHTML='<div class="err">'+esc(e.message)+'</div>'; }
  finally{$('analyze').disabled=false}
 }
 async function saveLead(){
  if(!current)return;
- const b=$('saveLead'); b.disabled=true; b.textContent='СОХРАНЯЕМ...';
+ const b=$('saveLead');b.disabled=true;b.textContent='СОХРАНЯЕМ...';
  try{
-   const saved=await json('/api/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-     company:current.name,
-     legalName:current.legal,
-     inn:current.inn,
-     source:'Проверка компании по ИНН',
-     sourceType:'Автоанализ',
-     fitScore:70,
-     sizeScore:70,
-     request:'Предварительный анализ компании',
-     contactRole:'Не указан',
-     diagnostic:{engineVersion:'Предварительный интернет-анализ',findings:[],urgency:55,confidence:'ограниченная'}
-   })});
-   $('out').insertAdjacentHTML('beforeend',`<div class="panel saved"><div class="eyebrow">ЛИД СОХРАНЁН</div><h2>${esc(current.name)}</h2><p>Компания записана в постоянную базу вместе с результатом предварительного анализа.</p><div class="savedGrid"><div><span>Карточка</span><b>${esc(saved.lead.id)}</b></div><div><span>Этап</span><b>${esc(saved.lead.stage)}</b></div><div><span>Хранилище</span><b>${saved.storage==='PostgreSQL'?'Постоянная база':'Резервное хранилище'}</b></div></div><div class="actions"><a class="btn primary" href="/leads.html?lead=${encodeURIComponent(saved.lead.id)}">ОТКРЫТЬ КАРТОЧКУ ЛИДА →</a></div></div>`);
-   b.textContent='СОХРАНЕНО';
+  const saved=await call('/api/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    company:current.name,legalName:current.legal,inn:current.inn,research:current.research,
+    source:'Проверка компании по ИНН',sourceType:'Автоанализ',request:'Предварительный анализ компании',fitScore:70
+  })});
+  $('out').insertAdjacentHTML('beforeend','<div class="panel saved"><div class="eyebrow">ЛИД СОХРАНЁН</div><h2>'+esc(current.name)+'</h2><p>В базе сохранён тот же аналитический снимок, который вы видите выше.</p><div class="savedGrid"><div><span>Карточка</span><b>'+esc(saved.lead.id)+'</b></div><div><span>Квалификация</span><b>'+esc(saved.lead.qualification)+'</b></div><div><span>Хранилище</span><b>'+esc(saved.storage)+'</b></div></div><div class="actions"><a class="btn primary" href="/leads.html?lead='+encodeURIComponent(saved.lead.id)+'">ОТКРЫТЬ КАРТОЧКУ →</a></div></div>');
+  b.textContent='СОХРАНЕНО';
  }catch(e){b.disabled=false;b.textContent='СОХРАНИТЬ В БАЗУ →';alert(e.message)}
 }
 $('analyze').onclick=analyze;
