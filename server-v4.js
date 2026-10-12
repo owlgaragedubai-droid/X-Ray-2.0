@@ -289,6 +289,20 @@ initDb().then(async ()=>{
       signals:(test.signals||[]).map(x=>x.title),
       sources:(test.sources||[]).map(x=>({name:x.name,status:x.status,detail:x.detail,fields:x.fields}))
     }));
+    const rows=await loadLeads();
+    const stored=rows.find(x=>String(x.inn||'')==='7731316299');
+    if(stored){
+      stored.company=test.company||stored.company;
+      stored.legalName=test.legalName||stored.legalName;
+      stored.research=test;
+      stored.updatedAt=new Date().toISOString();
+      stored.leadScore=20;
+      stored.qualification='C — юрлицо недействующее';
+      stored.events=stored.events||[];
+      stored.events.push(event('research','Автоанализ обновлён','Карточка пересчитана новым многоканальным движком BX.'));
+      await saveRows(rows);
+      console.log('BX test lead refreshed in PostgreSQL:',stored.id);
+    }
   }catch(e){
     console.error('BX source self-test failed:',e.message);
   }
