@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { Pool } = require('pg');
 
 const publicDir = path.join(__dirname, 'public');
 const dataDir = path.join(__dirname, 'data');
@@ -21,6 +22,98 @@ const mime = {
 
 fs.mkdirSync(dataDir, { recursive: true });
 if (!fs.existsSync(leadsFile)) fs.writeFileSync(leadsFile, '[]\n', 'utf8');
+
+const pool = process.env.DATABASE_URL ? new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 5,
+  connectionTimeoutMillis: 5000,
+  idleTimeoutMillis: 10000
+}) : null;
+let databaseReady = false;
+
+async function initializeDatabase(){
+  if(!pool) return false;
+  try{
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS bx_leads (
+        id TEXT PRIMARY KEY,
+        company TEXT NOT NULL,
+        legal_name TEXT,
+        inn TEXT,
+        demo BOOLEAN NOT NULL DEFAULT FALSE,
+        demo_key TEXT,
+        stage TEXT,
+        qualification TEXT,
+        lead_score INTEGER,
+        payload JSONB NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS bx_leads_inn_idx ON bx_leads (inn)`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS bx_leads_demo_key_idx ON bx_leads (demo_key) WHERE demo_key IS NOT NULL`);
+    databaseReady = true;
+    console.log('PostgreSQL lead storage connected');
+    return true;
+  }catch(err){
+    databaseReady = false;
+    console.error('PostgreSQL unavailable, using fallback storage:', err.message);
+    return false;
+  }
+}
+
+async function loadLeads(){
+  if(databaseReady){
+    try{
+      const r = await pool.query('SELECT payload FROM bx_leads ORDER BY updated_at DESC');
+      return r.rows.map(x=>x.payload);
+    }catch(err){
+      console.error('PostgreSQL read failed, using fallback:',err.message);
+    }
+  }
+  return readLeads();
+}
+
+async function persistLeads(leads){
+  if(databaseReady){
+    const client=await pool.connect();
+    try{
+      await client.query('BEGIN');
+      for(const lead of leads){
+        await client.query(`
+          INSERT INTO bx_leads
+            (id,company,legal_name,inn,demo,demo_key,stage,qualification,lead_score,payload,created_at,updated_at)
+          VALUES
+            ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12)
+          ON CONFLICT (id) DO UPDATE SET
+            company=EXCLUDED.company,
+            legal_name=EXCLUDED.legal_name,
+            inn=EXCLUDED.inn,
+            demo=EXCLUDED.demo,
+            demo_key=EXCLUDED.demo_key,
+            stage=EXCLUDED.stage,
+            qualification=EXCLUDED.qualification,
+            lead_score=EXCLUDED.lead_score,
+            payload=EXCLUDED.payload,
+            updated_at=EXCLUDED.updated_at
+        `,[
+          lead.id,lead.company,lead.legalName||'',lead.inn||'',!!lead.demo,lead.demoKey||null,
+          lead.stage||'',lead.qualification||'',Number(lead.leadScore||0),
+          JSON.stringify(lead),lead.createdAt||new Date().toISOString(),lead.updatedAt||new Date().toISOString()
+        ]);
+      }
+      await client.query('COMMIT');
+      return 'PostgreSQL';
+    }catch(err){
+      await client.query('ROLLBACK');
+      console.error('PostgreSQL write failed, using fallback:',err.message);
+    }finally{
+      client.release();
+    }
+  }
+  writeLeads(leads);
+  return 'серверное демо-хранилище';
+}
 
 const questionSchema = [
   { key:'finance_visibility', domain:'Финансы', weight:1.2 },
@@ -431,6 +524,11 @@ function seedDemoLead(){
 }
 
 seedDemoLead();
+initializeDatabase().then(async ok=>{
+  if(ok){
+    try{ await persistLeads(readLeads()); }catch(e){ console.error('Demo lead seed failed:',e.message); }
+  }
+});
 
 async function api(req,res,urlPath){
   if(urlPath === '/api/diagnostic' && req.method === 'POST'){
@@ -460,8 +558,8 @@ async function api(req,res,urlPath){
   }
 
   if(urlPath === '/api/leads' && req.method === 'GET'){
-    const leads = readLeads().filter(x=>x.demo===true);
-    return json(res,200,{ok:true,storage:process.env.DATABASE_URL?'PostgreSQL':'серверное демо-хранилище',leads});
+    const leads = (await loadLeads()).filter(x=>x.demo===true);
+    return json(res,200,{ok:true,storage:databaseReady?'PostgreSQL':'серверное демо-хранилище',leads});
   }
 
   if(urlPath === '/api/leads' && req.method === 'POST'){
@@ -470,7 +568,7 @@ async function api(req,res,urlPath){
       const company = String(body.company || '').trim();
       if(!company) return json(res,400,{ok:false,error:'Не указана компания.'});
 
-      const leads = readLeads();
+      const leads = await loadLeads();
       const key = companyKey(body.legalName || company);
       let lead = leads.find(x=>companyKey(x.legalName || x.company)===key && x.demo===true);
       const diagnostic = body.diagnostic && body.diagnostic.findings ? body.diagnostic : analyzeDiagnostic(aluminstarDemoAnswers);
@@ -529,8 +627,8 @@ async function api(req,res,urlPath){
         leads.unshift(lead);
       }
 
-      writeLeads(leads);
-      return json(res,200,{ok:true,storage:process.env.DATABASE_URL?'PostgreSQL':'серверное демо-хранилище',lead});
+      const storage = await persistLeads(leads);
+      return json(res,200,{ok:true,storage,lead});
     }catch(e){
       return json(res,400,{ok:false,error:'Не удалось сохранить заявку.'});
     }
@@ -543,7 +641,7 @@ http.createServer(async (req,res)=>{
   const urlPath = decodeURIComponent((req.url || '/').split('?')[0]);
 
   if(urlPath === '/health'){
-    return json(res,200,{ok:true,service:'business-xray',version:'v3.1',diagnosticEngine:'v1'});
+    return json(res,200,{ok:true,service:'business-xray',version:'v3.2',diagnosticEngine:'v1',storage:databaseReady?'PostgreSQL':'fallback',databaseConfigured:!!pool});
   }
 
   if(urlPath.startsWith('/api/')){
@@ -566,4 +664,4 @@ http.createServer(async (req,res)=>{
   const index = path.join(publicDir, 'index.html');
   res.writeHead(200, {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
   fs.createReadStream(index).pipe(res);
-}).listen(port,'0.0.0.0',()=>console.log('Business X-Ray v3.1 listening on',port));
+}).listen(port,'0.0.0.0',()=>console.log('Business X-Ray v3.2 listening on',port));
