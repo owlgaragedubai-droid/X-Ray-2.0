@@ -275,7 +275,24 @@ async function api(req,res,urlPath){
   return false;
 }
 
-initDb();
+initDb().then(async ()=>{
+  try{
+    const test=await enrichCompany({inn:'7731316299'});
+    console.log('BX source self-test:', JSON.stringify({
+      inn:test.inn,
+      company:test.company,
+      legalName:test.legalName,
+      confidence:test.confidence,
+      coverage:test.sourceCoverage,
+      profile:test.profile,
+      metrics:test.metrics,
+      signals:(test.signals||[]).map(x=>x.title),
+      sources:(test.sources||[]).map(x=>({name:x.name,status:x.status,detail:x.detail,fields:x.fields}))
+    }));
+  }catch(e){
+    console.error('BX source self-test failed:',e.message);
+  }
+});
 
 http.createServer(async (req,res)=>{
   const urlPath=decodeURIComponent((req.url||'/').split('?')[0]);
