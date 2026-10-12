@@ -526,7 +526,13 @@ function seedDemoLead(){
 seedDemoLead();
 initializeDatabase().then(async ok=>{
   if(ok){
-    try{ await persistLeads(readLeads()); }catch(e){ console.error('Demo lead seed failed:',e.message); }
+    try{
+      await persistLeads(readLeads());
+      const check=await pool.query('SELECT COUNT(*)::int AS count FROM bx_leads');
+      console.log('PostgreSQL lead count:',check.rows[0].count);
+    }catch(e){
+      console.error('Demo lead seed failed:',e.message);
+    }
   }
 });
 
