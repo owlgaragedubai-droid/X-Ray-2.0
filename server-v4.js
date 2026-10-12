@@ -285,6 +285,8 @@ initDb().then(async ()=>{
       confidence:test.confidence,
       coverage:test.sourceCoverage,
       profile:test.profile,
+      facts:test.facts,
+      ratios:test.ratios,
       metrics:test.metrics,
       signals:(test.signals||[]).map(x=>x.title),
       sources:(test.sources||[]).map(x=>({name:x.name,status:x.status,detail:x.detail,fields:x.fields}))
