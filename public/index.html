@@ -3,34 +3,64 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#f4f7f6">
-  <meta name="description" content="BX — диагностика бизнеса для собственника. Помогаем понять, где теряются деньги, почему это происходит и какое решение принять первым.">
-  <title>BX — диагностика бизнеса</title>
+  <meta name="theme-color" content="#f5f7f6">
+  <meta name="description" content="BX — система решений собственника. Диагностика бизнеса, независимая проверка гипотез, план изменений и контроль эффекта.">
+  <title>BX — система решений собственника</title>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/demo.css">
 </head>
 <body>
   <header class="nav">
     <div class="shell navin">
-      <a class="brand" href="/">BX<small>ДИАГНОСТИКА БИЗНЕСА</small></a>
-      <nav class="menu">
-        <a href="/xray">Диагностика</a>
+      <a class="brand" href="/" aria-label="BX — главная">
+        <span>BX</span><small>СИСТЕМА РЕШЕНИЙ СОБСТВЕННИКА</small>
+      </a>
+      <button class="menuToggle" id="menuToggle" type="button" aria-label="Открыть меню" aria-expanded="false">☰</button>
+      <nav class="menu" id="mainMenu">
+        <a href="/about">О проекте</a>
+        <a href="/sergey-savinov">Сергей Савинов</a>
+        <a href="/products">Продукты</a>
+        <a href="/projects">Проекты</a>
         <a href="/board">Совет BX</a>
-        <a href="/cases">Кейсы</a>
-        <a href="/intelligence">Аналитика</a>
-        <a href="/methodology">Методология</a>
-        <a href="/portal-demo">Личный кабинет</a>
+        <a href="/tools">Инструменты</a>
       </nav>
-      <a class="btn primary" href="/quick-scan">НАЧАТЬ ДИАГНОСТИКУ →</a>
+      <a class="btn primary navCta" href="/company-check.html">ПРОВЕРИТЬ КОМПАНИЮ →</a>
     </div>
   </header>
+
   <main id="app"></main>
+
   <footer class="footer">
-    <div class="shell footerIn">
-      <b>BX · диагностика бизнеса</b>
-      <span>Факты → причины → решение → действие → результат</span>
+    <div class="shell footerGrid">
+      <div>
+        <a class="brand footerBrand" href="/"><span>BX</span><small>СИСТЕМА РЕШЕНИЙ СОБСТВЕННИКА</small></a>
+        <p>Факты → причины → конфликт → решение → действие → подтверждённый результат.</p>
+      </div>
+      <div>
+        <b>Проект</b>
+        <a href="/about">История и принципы</a>
+        <a href="/sergey-savinov">Управляющий партнёр</a>
+        <a href="/projects">Проекты</a>
+      </div>
+      <div>
+        <b>Работа</b>
+        <a href="/products">Продукты</a>
+        <a href="/board">Совет BX</a>
+        <a href="/methodology">Методология</a>
+      </div>
+      <div>
+        <b>Начать</b>
+        <a href="/company-check.html">Проверка по ИНН</a>
+        <a href="/quick-scan">Быстрая диагностика</a>
+        <a href="/contact">Запросить разбор</a>
+      </div>
+    </div>
+    <div class="shell footerBottom">
+      <span>© 2026 BX. Управляющий партнёр — Сергей Савинов.</span>
+      <span>Предварительные выводы не заменяют аудит, юридическое или налоговое заключение.</span>
     </div>
   </footer>
+
   <script src="/app.js" defer></script>
   <script src="/demo.js" defer></script>
 </body>
