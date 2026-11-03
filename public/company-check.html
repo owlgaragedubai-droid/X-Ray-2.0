@@ -74,7 +74,6 @@ function render(research){
    ${p.address?'<div class="notice"><b>Адрес:</b> '+esc(p.address)+'</div>':''}
    ${p.okved?'<div class="notice"><b>Основная деятельность:</b> '+esc(p.okved)+'</div>':''}
    ${metrics.length?'<div class="metrics" style="margin-top:14px">'+metrics.map(m=>'<div class="metric"><span>'+esc(m.label)+'</span><b>'+esc(m.value)+'</b></div>').join('')+'</div>':'<div class="notice">Числовая финансовая отчётность в ответивших источниках не найдена.</div>'}
-   <div class="recommend"><div class="eyebrow">КВАЛИФИКАЦИЯ BX</div><strong>${esc(research.leadRecommendation||'Требует ручной проверки')}</strong></div>
    <div class="analysisGrid">
      <div><div class="eyebrow">ЧТО ВИДИТ СИСТЕМА</div><div class="signalList">${signals.map(x=>'<div class="signal '+esc(x.tone)+'"><b>'+esc(x.title)+'</b><span>'+esc(x.text)+'</span></div>').join('')}</div></div>
      <div><div class="eyebrow">ЧТО ПРОВЕРЯТЬ ДАЛЬШЕ</div><div class="ideaList">${ideas.map((x,i)=>'<div class="idea"><b>'+(i+1)+'.</b> '+esc(x)+'</div>').join('')}</div></div>

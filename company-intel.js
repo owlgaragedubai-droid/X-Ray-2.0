@@ -508,7 +508,7 @@ function buildSignals(d) {
   const signals = [], hypotheses = [];
   if (d.status === 'Недействующая') {
     signals.push({tone:'bad',title:'Юридическое лицо недействующее',text:d.liquidationDate?'Прекращение зафиксировано: '+d.liquidationDate+'.':'Компания отмечена как недействующая.'});
-    hypotheses.push('Не вести это юрлицо как активный коммерческий лид. Проверить действующие связанные компании, бренд и объект.');
+    hypotheses.push('Проверить текущий статус юридического лица, действующие связанные компании, бренд и объект.');
   }
   if (d.hasUnreliableData) {
     signals.push({tone:'bad',title:'Есть отметка о недостоверности сведений',text:'Перед контактом нужно проверить актуальное действующее юрлицо и адрес.'});
@@ -534,7 +534,7 @@ function buildSignals(d) {
   }
   if (Number.isFinite(d.enforcementCount) && d.enforcementCount > 0) {
     signals.push({tone:'warn',title:'Есть исполнительные производства',text:'В открытых данных найдено производств: '+d.enforcementCount+'.'});
-    hypotheses.push('Проверить характер и актуальность исполнительных производств до квалификации лида.');
+    hypotheses.push('Проверить характер и актуальность исполнительных производств до решения о сотрудничестве.');
   }
   if (Number.isFinite(d.relatedCount) && d.relatedCount > 0 && d.status === 'Недействующая') {
     signals.push({tone:'good',title:'Есть связанные лица и компании',text:'Открытый источник показывает связи; это полезно для поиска действующего преемника.'});
@@ -545,7 +545,7 @@ function buildSignals(d) {
     hypotheses.push('Проверить актуальность налоговой задолженности и её влияние на ликвидность.');
   }
   if (d.debtSentToBailiff) {
-    signals.push({tone:'bad',title:'ФНС указывает долг, направленный приставам',text:'Этот признак требует проверки перед квалификацией компании как активного лида.'});
+    signals.push({tone:'bad',title:'ФНС указывает долг, направленный приставам',text:'Этот признак требует проверки до решения о сотрудничестве.'});
   }
   if (d.reportingProblem) {
     signals.push({tone:'bad',title:'Есть риск по налоговой отчётности',text:'ФНС публикует признак проблемы с представлением налоговой отчётности.'});
@@ -668,7 +668,7 @@ async function enrichCompany({inn}) {
     ratios:{revenueGrowth:d.revenueGrowth,netMargin:d.netMargin,currentRatio:d.currentRatio,equityShare:d.equityShare,receivablesShare:d.receivablesShare},
     metrics:makeMetrics(d),
     signals,hypotheses,leadRecommendation,sources,
-    caveat:'Автоматический анализ основан на открытых данных. Он служит для предварительной квалификации лида и должен подтверждаться первичными документами компании.'
+    caveat:'Автоматический анализ основан на открытых данных. Предварительные выводы необходимо подтверждать первичными документами компании.'
   };
 }
 
