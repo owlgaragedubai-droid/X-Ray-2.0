@@ -224,7 +224,6 @@ function tools(){
       ['◌','Быстрая диагностика','Предварительные вопросы по деньгам, продажам, управлению и прозрачности бизнеса.','/quick-scan'],
       ['▤','Пример результата','Как BX объясняет главную проблему, причины, действия и ограничения.','/sample-report'],
       ['⌘','Кабинет собственника','Демонстрация карты здоровья бизнеса, решений и статуса изменений.','/portal-demo'],
-      ['◎','Демо-путь лида','Как компания проходит диагностику и попадает во внутреннюю базу.','/demo/aluminstar'],
       ['↗','Boardroom и BX-радар','Реестр решений, задачи, риски и ежедневный контур собственника.','/about']
     ].map(x=>`<a class="panel toolCard" href="${x[3]}"><div class="toolIcon">${x[0]}</div><h3>${x[1]}</h3><p>${x[2]}</p><span class="arrow">Открыть →</span></a>`).join('')}
   </div></div></section>`;
@@ -250,18 +249,27 @@ function contact(){
   app.innerHTML = pageHero('ЗАПРОСИТЬ РАЗБОР','Начните с вопроса, который нельзя решить ещё одной планёркой.','Для предварительной квалификации нужен ИНН компании и короткое описание задачи.') + `
   <section class="section noLine"><div class="shell"><div class="contactLayout">
     <div class="panel contactIntro"><div class="eyebrow">КАК НАЧАТЬ</div><h2>Три шага до содержательного разговора.</h2><p>Заявка не означает автоматическую продажу проекта. Сначала BX проверяет, есть ли задача, данные и основания двигаться дальше.</p><div class="contactSteps"><div><i>1</i><span><b>Компания и ИНН</b><br><span class="muted">проверяем открытый контур</span></span></div><div><i>2</i><span><b>Вопрос собственника</b><br><span class="muted">что именно нужно решить</span></span></div><div><i>3</i><span><b>Квалификация</b><br><span class="muted">пилот, встреча или честный отказ</span></span></div></div></div>
-    <form class="panel contactForm" id="leadForm"><div class="eyebrow">ЗАЯВКА</div><div class="formGrid"><label>Компания<input id="company" required placeholder="Название компании"></label><label>ИНН<input id="inn" required inputmode="numeric" maxlength="12" placeholder="10 или 12 цифр"></label><label>Ваша роль<input id="role" placeholder="Собственник / CEO / CFO"></label><label>Формат<select id="request"><option>Полная диагностика бизнеса</option><option>Проверка отдельного решения</option><option>90 дней изменений</option><option>Партнёр собственника</option></select></label></div><label>Главный вопрос<textarea id="note" rows="5" placeholder="Что происходит и какое решение вы хотите принять?"></textarea></label><div class="formNote">Отправляя заявку, вы соглашаетесь на обработку указанных данных для связи и предварительного анализа компании.</div><button class="btn primary" type="submit">ОТПРАВИТЬ ЗАЯВКУ →</button><div id="formState"></div></form>
+    <form class="panel contactForm" id="leadForm"><div class="eyebrow">ЗАЯВКА</div><div class="formGrid"><label>Компания<input id="company" required placeholder="Название компании"></label><label>ИНН<input id="inn" required inputmode="numeric" maxlength="12" placeholder="10 или 12 цифр"></label><label>Ваше имя<input id="contactName" autocomplete="name" maxlength="120" placeholder="Как к вам обращаться"></label><label>Ваша роль<input id="role" maxlength="120" placeholder="Собственник / CEO / CFO"></label><label>Email<input id="email" type="email" autocomplete="email" maxlength="254" placeholder="Для ответа на ваш вопрос"></label><label>Телефон<input id="phone" type="tel" autocomplete="tel" maxlength="40" placeholder="Можно указать вместо email"></label><label>Формат<select id="request"><option>Полная диагностика бизнеса</option><option>Проверка отдельного решения</option><option>90 дней изменений</option><option>Партнёр собственника</option></select></label></div><label>Главный вопрос<textarea id="note" rows="5" required maxlength="5000" placeholder="Что происходит и какое решение вы хотите принять?"></textarea></label><div class="formNote">Отправляя заявку, вы соглашаетесь на обработку указанных данных для связи и предварительного анализа компании.</div><button class="btn primary" type="submit">ОТПРАВИТЬ ЗАЯВКУ →</button><div id="formState"></div></form>
   </div></div></section>`;
   const form = document.getElementById('leadForm');
+  let submissionKey=crypto.randomUUID();
+  form.addEventListener('input',()=>{submissionKey=crypto.randomUUID();});
+  const initial=new URLSearchParams(location.search);
+  document.getElementById('company').value=initial.get('company')||'';
+  document.getElementById('inn').value=(initial.get('inn')||'').replace(/\D/g,'').slice(0,12);
   form.addEventListener('submit',async(e)=>{
     e.preventDefault();
     const button=form.querySelector('button'); const box=document.getElementById('formState');
     button.disabled=true; button.textContent='ОБРАБАТЫВАЕМ...'; box.innerHTML='';
     try{
-      const response=await fetch('/api/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company:document.getElementById('company').value,inn:document.getElementById('inn').value,contactRole:document.getElementById('role').value,request:document.getElementById('request').value,note:document.getElementById('note').value,source:'Основной сайт BX',sourceType:'Сайт'})});
+      const email=document.getElementById('email').value.trim();
+      const phone=document.getElementById('phone').value.trim();
+      if(!email && !phone) throw new Error('Укажите email или телефон для ответа.');
+      const response=await fetch('/api/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({submissionKey,email,phone,contactName:document.getElementById('contactName').value,company:document.getElementById('company').value,inn:document.getElementById('inn').value,contactRole:document.getElementById('role').value,request:document.getElementById('request').value,note:document.getElementById('note').value,source:'Основной сайт BX',sourceType:'Сайт'})});
       const data=await response.json(); if(!response.ok||!data.ok) throw new Error(data.error||'Не удалось отправить заявку');
-      box.innerHTML=`<div class="formSuccess"><b>Заявка сохранена.</b><br>Карточка ${data.lead.id} создана. BX прикрепит к ней предварительный открытый анализ компании.</div>`; form.reset();
-    }catch(err){box.innerHTML=`<div class="warning">${err.message}</div>`;}
+      const message=document.createElement('div'); message.className='formSuccess';
+      message.textContent='Обращение сохранено. Номер: '+data.requestId+'. Мы ответим по указанному контакту.'; box.replaceChildren(message); form.reset(); submissionKey=crypto.randomUUID();
+    }catch(err){const warning=document.createElement('div');warning.className='warning';warning.textContent=err.message;box.replaceChildren(warning);}
     finally{button.disabled=false;button.textContent='ОТПРАВИТЬ ЗАЯВКУ →';}
   });
 }
@@ -328,3 +336,4 @@ else notFound();
 const toggle=document.getElementById('menuToggle');
 const menu=document.getElementById('mainMenu');
 if(toggle&&menu){toggle.addEventListener('click',()=>{const open=menu.classList.toggle('open');toggle.setAttribute('aria-expanded',String(open));toggle.textContent=open?'×':'☰';});menu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>menu.classList.remove('open')));}
+

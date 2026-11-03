@@ -23,7 +23,7 @@
 </style>
 </head>
 <body>
-<header class="nav"><div class="shell navin"><a class="brand" href="/">BX<small>ДИАГНОСТИКА БИЗНЕСА</small></a><nav class="menu"><a href="/company-check.html">Проверить компанию</a><a href="/leads.html">База лидов</a><a href="/quick-scan">Диагностика</a></nav><a class="btn ghost" href="/">На сайт</a></div></header>
+<header class="nav"><div class="shell navin"><a class="brand" href="/">BX<small>ДИАГНОСТИКА БИЗНЕСА</small></a><nav class="menu"><a href="/company-check.html">Проверить компанию</a><a href="/quick-scan">Диагностика</a></nav><a class="btn ghost" href="/">На сайт</a></div></header>
 <main class="checkShell">
   <div class="checkHero">
     <div class="eyebrow">АВТОАНАЛИЗ КОМПАНИИ</div>
@@ -82,7 +82,7 @@ function render(research){
    <div class="sourcesPanel"><div class="eyebrow">ПРОТОКОЛ ИСТОЧНИКОВ</div><div class="sourceRows">
      ${sources.map(s=>'<div class="sourceRow"><b>'+esc(s.name)+'</b><div class="sourceStatus '+statusClass(s.status)+'">'+sourceLabel(s.status)+'</div><span>'+esc(s.detail||'')+'</span><a href="'+esc(s.url)+'" target="_blank" rel="noopener">Открыть ↗</a></div>').join('')}
    </div></div>
-   <div class="saveRow"><p>Сохранить компанию в базу вместе с этим снимком, статусом источников и гипотезами.</p><button class="btn primary" id="saveLead">СОХРАНИТЬ В БАЗУ →</button></div>
+   <div class="saveRow"><p>Сформулируйте вопрос по результатам проверки и оставьте контакт для ответа.</p><button class="btn primary" id="saveLead">ОБСУДИТЬ РЕЗУЛЬТАТ →</button></div>
    <div class="notice">${esc(research.caveat||'Это предварительная оценка по открытым данным.')}</div>
  </section>`;
  $('saveLead').onclick=saveLead;
@@ -98,17 +98,9 @@ async function analyze(){
  }catch(e){ $('out').innerHTML='<div class="err">'+esc(e.message)+'</div>'; }
  finally{$('analyze').disabled=false}
 }
-async function saveLead(){
+function saveLead(){
  if(!current)return;
- const b=$('saveLead');b.disabled=true;b.textContent='СОХРАНЯЕМ...';
- try{
-  const saved=await call('/api/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-    company:current.name,legalName:current.legal,inn:current.inn,research:current.research,
-    source:'Проверка компании по ИНН',sourceType:'Автоанализ',request:'Предварительный анализ компании',fitScore:70
-  })});
-  $('out').insertAdjacentHTML('beforeend','<div class="panel saved"><div class="eyebrow">ЛИД СОХРАНЁН</div><h2>'+esc(current.name)+'</h2><p>В базе сохранён тот же аналитический снимок, который вы видите выше.</p><div class="savedGrid"><div><span>Карточка</span><b>'+esc(saved.lead.id)+'</b></div><div><span>Квалификация</span><b>'+esc(saved.lead.qualification)+'</b></div><div><span>Хранилище</span><b>'+esc(saved.storage)+'</b></div></div><div class="actions"><a class="btn primary" href="/leads.html?lead='+encodeURIComponent(saved.lead.id)+'">ОТКРЫТЬ КАРТОЧКУ →</a></div></div>');
-  b.textContent='СОХРАНЕНО';
- }catch(e){b.disabled=false;b.textContent='СОХРАНИТЬ В БАЗУ →';alert(e.message)}
+ location.href='/contact?'+new URLSearchParams({inn:current.inn,company:current.name}).toString();
 }
 $('analyze').onclick=analyze;
 $('inn').addEventListener('keydown',e=>{if(e.key==='Enter')analyze()});

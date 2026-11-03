@@ -23,7 +23,7 @@
 <body>
 <header class="nav"><div class="shell navin"><a class="brand" href="/">BX<small>ВНУТРЕННЯЯ БАЗА</small></a><nav class="menu"><a href="/company-check.html">Проверить компанию</a><a href="/leads.html">База лидов</a></nav><a class="btn ghost" href="/">На сайт</a></div></header>
 <main class="leadsShell">
- <div class="warn"><b>Тестовый внутренний экран.</b> Перед использованием с реальными контактами клиентов его нужно закрыть авторизацией.</div>
+ <div class="warn"><b>Обращения BX.</b> Доступ только для команды.</div>
  <div class="top"><div><div class="eyebrow">ВХОДЯЩИЕ КОМПАНИИ</div><h1>База лидов BX</h1></div><div class="topActions"><a class="btn primary" href="/company-check.html">+ ПРОВЕРИТЬ КОМПАНИЮ</a><button class="btn ghost" id="reload">Обновить</button></div></div>
  <div class="pipeline" id="pipeline"></div>
  <div class="layout"><div class="panel list" id="list"></div><div class="panel detail" id="detail"><div class="empty">Выберите компанию слева.</div></div></div>
@@ -67,6 +67,12 @@ function renderDetail(){
   <div class="row"><span>Приоритет</span><b>${esc(selected.qualification||'Не определён')}</b></div>
   <div class="row"><span>Источник</span><b>${esc(selected.source||'Сайт BX')}</b></div>
   <div class="row"><span>Запрос</span><b>${esc(selected.request||'Предварительный анализ')}</b></div>
+  <div class="row"><span>Контактное лицо</span><b>${esc(selected.contactName||'Не указано')}</b></div>
+  <div class="row"><span>Роль</span><b>${esc(selected.contactRole||'Не указана')}</b></div>
+  <div class="row"><span>Email</span><b>${esc(selected.email||'Не указан')}</b></div>
+  <div class="row"><span>Телефон</span><b>${esc(selected.phone||'Не указан')}</b></div>
+  <div class="row"><span>Уведомление по почте</span><b>${esc(({pending:'Ожидает отправки',retry:'Повторная попытка',sent:'Принято почтовым сервером',failed:'Ошибка отправки'})[selected.notification?.state]||'Не предусмотрено для старой записи')}</b></div>
+  <div class="row"><span>Вопрос клиента</span><b style="white-space:pre-wrap">${esc(selected.note||'Не указан')}</b></div>
   <div class="row"><span>Основной контекст</span><b>${esc(area)}</b></div>
   <div class="row"><span>Хранилище</span><b>${storage==='PostgreSQL'?'Постоянная база PostgreSQL':'Резервное хранилище'}</b></div>
  </div>

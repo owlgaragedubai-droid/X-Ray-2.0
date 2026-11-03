@@ -1,6 +1,9 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { randomUUID, createHash } = require('crypto');
+const { protectedPath, requireAdmin, intakeFields } = require('./lead-security');
+const { createNotifier } = require('./lead-notifications');
 const { Pool } = require('pg');
 const { enrichCompany, isValidInn } = require('./company-intel');
 
@@ -31,6 +34,9 @@ const pool = process.env.DATABASE_URL ? new Pool({
   idleTimeoutMillis:10000
 }) : null;
 let databaseReady=false;
+const notifier=createNotifier(pool);
+const notificationTimer=setInterval(()=>{ if(databaseReady) notifier.drain(); },30000);
+notificationTimer.unref();
 
 async function initDb(){
   if(!pool) return false;
@@ -209,118 +215,87 @@ async function api(req,res,urlPath){
   }
 
   if(urlPath==='/api/leads' && req.method==='GET'){
-    return json(res,200,{ok:true,storage:databaseReady?'PostgreSQL':'резервное хранилище',leads:await loadLeads()});
+    try {
+      if(!pool || (!databaseReady && !await initDb())) throw new Error('database unavailable');
+      const result=await pool.query('SELECT payload FROM bx_leads ORDER BY updated_at DESC');
+      return json(res,200,{ok:true,storage:'PostgreSQL',leads:result.rows.map(row=>row.payload)});
+    } catch(e) {
+      return json(res,503,{ok:false,error:'База временно недоступна. Обновите страницу позднее.'});
+    }
   }
 
   if(urlPath==='/api/leads' && req.method==='POST'){
-    try{
-      const body=await readBody(req);
-      const inn=String(body.inn||'').replace(/\D/g,'');
-      if(!isValidInn(inn)) return json(res,400,{ok:false,error:'Укажите корректный ИНН.'});
-
-      const research=body.research&&body.research.inn===inn?body.research:await enrichCompany({inn});
-      const company=String(body.company||research.company||research.legalName||('Компания '+inn)).trim();
-      const rows=await loadLeads();
-      let lead=rows.find(x=>String(x.inn||'')===inn);
+    if(!/^application\/json(?:;|$)/i.test(req.headers['content-type']||'')) return json(res,415,{ok:false,error:'Отправьте заявку через форму сайта.'});
+    let body, fields;
+    try {
+      body=await readBody(req);
+      fields=intakeFields(body);
+    } catch(e) { return json(res,400,{ok:false,error:e.message==='payload too large'?'Слишком большой запрос.':e.message}); }
+    const inn=String(body.inn||'').replace(/\D/g,'');
+    if(!isValidInn(inn)) return json(res,400,{ok:false,error:'Укажите корректный ИНН.'});
+    if(!pool || (!databaseReady && !await initDb())) return json(res,503,{ok:false,error:'Приём обращений временно недоступен. Попробуйте позднее.'});
+    try {
+      // Each submission is a separate request. An INN is public and cannot identify a person.
+      // Never accept a caller-supplied research report, score or internal history.
       const now=new Date().toISOString();
-      const leadScore=scoreLead(research,Number(body.fitScore||70));
-      const qualification=leadScore>=80?'A — высокий приоритет':leadScore>=55?'B — проверить':'C — низкий приоритет';
-
-      if(lead){
-        lead.company=company;
-        lead.legalName=body.legalName||research.legalName||lead.legalName||'';
-        lead.research=research;
-        lead.updatedAt=now;
-        lead.stage='Новая заявка';
-        lead.leadScore=leadScore;
-        lead.qualification=qualification;
-        lead.request=body.request||lead.request||'Предварительный анализ компании';
-        lead.events=lead.events||[];
-        lead.events.push(event('research','Компания повторно проанализирована','Открытые источники обновлены по ИНН.'));
-        lead.events.push(event('dedupe','Карточка объединена','Новая заявка объединена с существующим лидом по ИНН.'));
-      }else{
-        lead={
-          id:'BX-'+Date.now().toString(36).toUpperCase(),
-          demo:body.demo===true,
-          company,
-          legalName:body.legalName||research.legalName||'',
-          inn,
-          source:body.source||'Проверка компании по ИНН',
-          sourceType:body.sourceType||'Автоанализ',
-          leadScore,
-          qualification,
-          stage:'Новая заявка',
-          request:body.request||'Предварительный анализ компании',
-          contactRole:body.contactRole||'Не указан',
-          createdAt:now,
-          updatedAt:now,
-          diagnostic:body.diagnostic||null,
-          research,
-          events:[
-            event('intake','Получен ИНН','Запущен автоматический внешний анализ компании.'),
-            event('research','Открытые источники обработаны',(research.sourceCoverage?.successful||0)+' из '+(research.sourceCoverage?.total||0)+' источников дали данные.'),
-            event('qualification','Лид квалифицирован',research.leadRecommendation||qualification),
-            event('stored','Карточка сохранена','Лид записан в базу BX.')
-          ]
-        };
-        rows.unshift(lead);
+      const submissionKey=typeof body.submissionKey==='string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.submissionKey)?body.submissionKey.toLowerCase():randomUUID();
+      const submissionHash=createHash('sha256').update(JSON.stringify({inn,...fields})).digest('hex');
+      const lead={
+        id:'BX-'+submissionKey, ...fields, inn, submissionHash,
+        company:fields.company||('Компания '+inn), legalName:'',
+        source:'Форма сайта BX', sourceType:'Сайт', demo:false,
+        stage:'Новая заявка', qualification:'Требует проверки', leadScore:0,
+        createdAt:now, updatedAt:now, research:null,
+        notification:{state:'pending',queuedAt:now},
+        events:[event('intake','Получено обращение','Контакт и вопрос сохранены.')]
+      };
+      const inserted=await pool.query('INSERT INTO bx_leads (id,company,legal_name,inn,demo,stage,qualification,lead_score,payload,created_at,updated_at) VALUES ($1,$2,$3,$4,FALSE,$5,$6,$7,$8::jsonb,$9,$9) ON CONFLICT (id) DO NOTHING RETURNING id',[
+        lead.id,lead.company,'',inn,lead.stage,lead.qualification,0,JSON.stringify(lead),now
+      ]);
+      if(!inserted.rows.length){
+        const previous=await pool.query("SELECT payload->>'submissionHash' AS hash FROM bx_leads WHERE id=$1",[lead.id]);
+        if(previous.rows[0]?.hash!==submissionHash) return json(res,409,{ok:false,error:'Обновите страницу и повторите отправку.'});
+        return json(res,200,{ok:true,requestId:lead.id});
       }
-      const storage=await saveRows(rows);
-      return json(res,200,{ok:true,storage,lead});
-    }catch(e){
-      return json(res,400,{ok:false,error:'Не удалось сохранить заявку.',detail:e.message});
+      // Public callers receive only the receipt for their own submission.
+      json(res,201,{ok:true,requestId:lead.id});
+      notifier.drain();
+      enrichCompany({inn}).then(async research=>{
+        await pool.query("UPDATE bx_leads SET payload=jsonb_set(payload,'{research}',$2::jsonb), updated_at=NOW() WHERE id=$1",[lead.id,JSON.stringify(research)]);
+      }).catch(()=>console.error('Lead research deferred'));
+      return;
+    } catch(e) {
+      console.error('Lead intake unavailable');
+      return json(res,503,{ok:false,error:'Не удалось сохранить обращение. Повторите отправку позднее.'});
     }
   }
 
   return false;
 }
 
-initDb().then(async ()=>{
-  try{
-    const test=await enrichCompany({inn:'7453354145'});
-    console.log('BX source self-test:', JSON.stringify({
-      inn:test.inn,
-      company:test.company,
-      legalName:test.legalName,
-      confidence:test.confidence,
-      coverage:test.sourceCoverage,
-      profile:test.profile,
-      facts:test.facts,
-      ratios:test.ratios,
-      metrics:test.metrics,
-      signals:(test.signals||[]).map(x=>x.title),
-      sources:(test.sources||[]).map(x=>({name:x.name,status:x.status,detail:x.detail,fields:x.fields}))
-    }));
-    const rows=await loadLeads();
-    const stored=rows.find(x=>String(x.inn||'')==='7453354145');
-    if(stored){
-      stored.company=test.company||stored.company;
-      stored.legalName=test.legalName||stored.legalName;
-      stored.research=test;
-      stored.updatedAt=new Date().toISOString();
-      stored.leadScore=20;
-      stored.qualification='C — юрлицо недействующее';
-      stored.events=stored.events||[];
-      stored.events.push(event('research','Автоанализ обновлён','Карточка пересчитана новым многоканальным движком BX.'));
-      await saveRows(rows);
-      console.log('BX test lead refreshed in PostgreSQL:',stored.id);
-    }
-  }catch(e){
-    console.error('BX source self-test failed:',e.message);
-  }
-});
+initDb();
 
 http.createServer(async (req,res)=>{
-  const urlPath=decodeURIComponent((req.url||'/').split('?')[0]);
-  if(urlPath==='/health') return json(res,200,{ok:true,service:'business-xray',version:'v4.0',storage:databaseReady?'PostgreSQL':'fallback'});
+  try {
+  let decoded;
+  try { decoded=decodeURIComponent((req.url||'/').split('?')[0]); }
+  catch(e) { return json(res,400,{ok:false,error:'Некорректный адрес.'}); }
+  if(decoded.includes('\\') || decoded.includes('\0')) return json(res,400,{ok:false,error:'Некорректный адрес.'});
+  const urlPath=path.posix.normalize('/'+decoded).replace(/\/+$/, '') || '/';
+  if(protectedPath(urlPath,req.method) && !requireAdmin(req,res)) return;
+  res.setHeader('X-Content-Type-Options','nosniff');
+  res.setHeader('Referrer-Policy','same-origin');
+  if(protectedPath(urlPath,req.method)) res.setHeader('X-Robots-Tag','noindex, nofollow');
+  if(urlPath==='/health') return json(res,200,{ok:true,service:'business-xray',version:'v4.1',storage:databaseReady?'PostgreSQL':'fallback'});
   if(urlPath.startsWith('/api/')){
     const handled=await api(req,res,urlPath);
     if(handled!==false) return;
     return json(res,404,{ok:false,error:'Маршрут не найден.'});
   }
 
-  const requested=path.normalize(path.join(publicDir,urlPath));
-  const safe=requested.startsWith(publicDir);
+  const requested=path.resolve(publicDir,'.'+urlPath);
+  const relative=path.relative(publicDir,requested);
+  const safe=relative!=='' && !relative.startsWith('..') && !path.isAbsolute(relative);
   if(safe&&fs.existsSync(requested)&&fs.statSync(requested).isFile()){
     const ext=path.extname(requested).toLowerCase();
     res.writeHead(200,{'Content-Type':mime[ext]||'application/octet-stream','Cache-Control':ext==='.html'?'no-store':'public, max-age=120'});
@@ -329,4 +304,8 @@ http.createServer(async (req,res)=>{
   const index=path.join(publicDir,'index.html');
   res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
   fs.createReadStream(index).pipe(res);
-}).listen(port,'0.0.0.0',()=>console.log('Business X-Ray v4.0 listening on',port));
+  } catch(e) {
+    if(!res.headersSent) return json(res,500,{ok:false,error:'Запрос временно недоступен.'});
+    res.end();
+  }
+}).listen(port,'0.0.0.0',()=>console.log('Business X-Ray v4.1 listening on',port));
