@@ -4,6 +4,7 @@ const path = require('path');
 const { randomUUID, createHash } = require('crypto');
 const { protectedPath, requireAdmin, intakeFields } = require('./lead-security');
 const { createNotifier } = require('./lead-notifications');
+const { createMailGateway } = require('./work-mail');
 const { Pool } = require('pg');
 const { enrichCompany, isValidInn } = require('./company-intel');
 
@@ -35,6 +36,7 @@ const pool = process.env.DATABASE_URL ? new Pool({
 }) : null;
 let databaseReady=false;
 const notifier=createNotifier(pool);
+const workMail=createMailGateway(pool);
 const notificationTimer=setInterval(()=>{ if(databaseReady) notifier.drain(); },30000);
 notificationTimer.unref();
 
@@ -282,6 +284,7 @@ http.createServer(async (req,res)=>{
   catch(e) { return json(res,400,{ok:false,error:'Некорректный адрес.'}); }
   if(decoded.includes('\\') || decoded.includes('\0')) return json(res,400,{ok:false,error:'Некорректный адрес.'});
   const urlPath=path.posix.normalize('/'+decoded).replace(/\/+$/, '') || '/';
+  if(urlPath==='/api/work-mail') return await workMail(req,res);
   if(protectedPath(urlPath,req.method) && !requireAdmin(req,res)) return;
   res.setHeader('X-Content-Type-Options','nosniff');
   res.setHeader('Referrer-Policy','same-origin');
@@ -309,3 +312,4 @@ http.createServer(async (req,res)=>{
     res.end();
   }
 }).listen(port,'0.0.0.0',()=>console.log('Business X-Ray v4.1 listening on',port));
+
